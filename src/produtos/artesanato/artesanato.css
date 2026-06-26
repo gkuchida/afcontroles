@@ -1,0 +1,393 @@
+/* --- CONTAINER E CABEÇALHO --- */
+.estoque-container {
+    padding: 24px;
+    background-color: #f8fafc;
+    min-height: 100vh;
+    font-family: system-ui, -apple-system, sans-serif;
+  }
+  
+  .estoque-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 24px;
+    border-bottom: 2px solid #e2e8f0;
+    padding-bottom: 12px;
+  }
+  
+  .header-titulo {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  
+  .header-titulo h1 {
+    font-size: 22px;
+    color: #1e3a8a;
+    margin: 0;
+  }  
+    
+  /* --- TABELA ESTRUTURADA (GRID RE-ALINHADO) --- */
+  .overflow-lista {
+    overflow-x: auto;
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+  }
+  
+  .lista-estoque {
+    min-width: 900px;
+  }
+  
+  /* Definição de proporções exatas para cada coluna */
+  .lista-header, .lista-item {
+    display: grid;
+    font-weight: bold;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 16px;
+  }
+
+  .caracteristicas{
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;    
+  }
+
+  .grid-tabela-artesanato {
+    display: grid;
+    grid-template-columns: 40px 60px 140px 180px 60px 80px 80px 100px 90px 100px 100px 110px 70px 60px !important;
+    align-items: center;
+    gap: 10px;
+  }
+  
+
+  .lista-header {
+    background-color: #1e3a8a;
+    color: white;
+    font-weight: 600;
+    font-size: 14px;    
+  }
+  
+  .lista-item {
+    background-color: white;
+    border-bottom: 1px solid #f1f5f9;
+    font-size: 14px;
+    color: #334155;
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+  
+  .lista-item:hover {
+    background-color: #f8fafc;
+  }
+  
+  .seta-expandir {
+    display: flex;
+    align-items: center;
+    color: #64748b;
+  }
+  
+  .badge-tamanho {
+    background-color: #f1f5f9;
+    color: #334155;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-weight: bold;
+    font-size: 12px;
+  }
+  
+  .valor-custo-dinamico {
+    color: #dc2626;
+    font-weight: bold;
+  }
+    
+  /* --- SUBGRADE DE COMPOSIÇÃO DE CUSTOS --- */
+  .painel-materiais-composicao {
+    background-color: #f8fafc;
+    padding: 16px;
+    border-bottom: 1px solid #e2e8f0;
+    box-shadow: inset 0 2px 4px rgba(0,0,0,0.02);
+  }
+  
+  .grade-sublista-header, .grade-sublista-linha {
+    display: grid;
+    grid-template-columns: 2.5fr 1fr 1fr 1fr 1fr;
+    padding: 8px 12px;
+    font-size: 13px;
+  }
+  
+  .grade-sublista-header {
+    border-bottom: 1px solid #cbd5e1;
+    color: #475569;
+    font-weight: 600;
+  }
+  
+  .grade-sublista-linha {
+    border-bottom: 1px solid #f1f5f9;
+    color: #64748b;
+  }
+  
+  .preco-mat-sublista {
+    font-weight: 600;
+    color: #334155;
+  }
+  
+  /* --- ESTRUTURA DO MODAL --- */
+  .modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.4);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;    
+  }
+  
+  .modal-content {
+    background: white;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1);
+    max-width: 1200px;
+    width: 95%;    
+  }
+  
+  .modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px 24px;
+    border-bottom: 1px solid #e2e8f0;
+  }
+  
+  .modal-header h2 {
+    font-size: 18px;
+    color: #1e3a8a;
+    margin: 0;
+  } 
+  
+  .grid-formulario {
+    display: grid;
+    padding: 24px;
+    gap: 20px;
+    grid-template-columns: 1fr 2fr;    
+  }
+  
+  .subsecao-form {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    border-left: 1px solid #E2E8F0;
+    padding-left: 20px;    
+  }
+
+  .subsecaoAdd{
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;    
+  }
+
+  .subsecaoAdd span{
+    font-weight: bold;
+    font-size: 14px;
+    color: #1E3A8A;    
+  }
+
+  .subsecaoAdd button{
+    display: flex;
+    align-items: center;    
+    gap: 4px;
+    font-size: 12px;
+    padding: 6px 12px;
+    background-color: #EFF6FF;
+    border: 1px solid #BFDBFE;
+    border-radius: 4px;
+    color: #1E40AF;
+    cursor: pointer;
+  }
+
+  .subsecaoMaterial{
+    max-height: 380px;
+    overflow-y: auto;
+    margin-bottom: 16px;
+  }
+  
+  .campo-input {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  
+  .campo-input label {
+    font-size: 12px;
+    font-weight: 600;
+    color: #475569;
+  }
+  
+  .campo-input input {
+    padding: 8px 12px;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    font-size: 14px;
+  }
+  
+  .linha-dupla {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+  
+  .modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+    padding: 16px 24px;
+    background-color: #f8fafc;
+    border-top: 1px solid #e2e8f0;
+  }
+  
+  .btn-cancelar {
+    padding: 8px 16px;
+    background: white;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    cursor: pointer;
+  }
+  
+  .btn-salvar {
+    padding: 8px 16px;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    background-color: #1E3A8A;
+  }
+
+  .btn-fechar-modal {
+    background: none;
+    border: none;
+    color: #94a3b8;
+    cursor: pointer;
+  }
+
+  .btn-abrir-cadastro {
+    background-color: #1e3a8a;
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 6px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.2s;
+  }
+  
+  .btn-abrir-cadastro:hover {
+    background-color: #1e40af;
+  }
+
+  .btn-editar {
+    background: none;
+    border: none;
+    color: #1e40af;
+    cursor: pointer;
+    padding: 4px;
+    border-radius: 4px;
+    display: flex;
+    justify-content: center;
+  }
+  
+  .btn-editar:hover {
+    color: #1e3a8a;
+    background-color: #f1f5f9;
+  }
+
+  .particular{
+    color: #10B981;
+    font-weight: 600;   
+  }
+
+  .bingo{
+    color: #2563EB;
+    font-weight: 600;
+  }
+
+  .material{
+    display: flex;
+    gap: 6px;
+    align-items: center;
+    margin-bottom: 8px;
+    background-color: #F8FAFC;
+    padding: 6px;
+    border-radius: 6px;
+    border: 1px solid #E2E8F0;
+  }
+
+  .material select{
+    flex: 2;
+    padding: 6px;
+    font-size: 12px;
+    border-radius: 4px;
+    border: 1px solid #CBD5E1;
+  }
+
+  .material input{
+    width: 65px;
+    padding: 6px;
+    font-size: 12px;
+    text-align: center;
+  }
+
+  .valor{
+    width: 85px;
+    font-size: 12px;
+    font-weight: bold;
+    text-align: right;
+  }
+
+  .calculos{
+    background-color: #F0F9FF;
+    border: 1px solid #B9E6FE;
+    padding: 12px;
+    border-radius: 8px;
+    font-size: 13px;
+  }
+
+  .calculosvalor{
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 4px;
+  }
+
+  .calculosvalorbingo{
+    display: flex;
+    justify-content: space-between;
+    color: #2563EB;
+  }
+  
+  .input-vender-por-tabela {
+    height: 30px !important;
+    width: 100% !important;
+    padding: 0 8px !important;
+    border: 1px solid #CBD5E1 !important;
+    border-radius: 4px !important;
+    font-size: 13px !important;
+    color: #1E293B !important;
+    background-color: #F8FAFC !important;
+    box-sizing: border-box !important;
+  }
+  
+  .input-vender-por-tabela:focus {
+    outline: none !important;
+    border-color: #1E3A8A !important;
+    background-color: #FFFFFF !important;
+    box-shadow: 0 0 0 2px rgba(30, 58, 138, 0.1) !important;
+  }
+
+    

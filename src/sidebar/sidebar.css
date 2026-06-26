@@ -1,0 +1,152 @@
+/* Sidebar Fixa na Esquerda */
+.sidebar {
+    width: 260px;
+    min-width: 260px; 
+    background-color: #1E293B; /* Azul escuro quase preto professional */
+    color: #f8fafc;
+    display: flex;
+    flex-direction: column;
+    padding: 24px 16px;
+    height: 100vh; /* Ocupa exatamente a altura total da janela */
+    box-sizing: border-box;
+    border-right: 1px solid #1e293b;
+  }
+  
+  /* Área da Logo / Nome do Sistema */
+  .sidebar-logo {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding-bottom: 24px;
+    border-bottom: 1px solid #1e293b;
+    margin-bottom: 24px;
+  }
+  
+  .sidebar-logo span {
+    font-size: 18px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    color: #ffffff;
+  }
+  
+  /* Bloco de Ícones do Menu */
+  .sidebar-nav {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    flex-grow: 1; /* Empurra o botão de configurações para o final */
+  }
+
+  .sidebar-pack{
+    background-color: #60A5FA;
+    padding: 5px;
+    border-radius: 6px;
+  }
+  
+  /* Links de Navegação (Menu) */
+  .nav-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 16px;
+    color: #94A3B8; /* Cor cinza discreta para itens normais */
+    text-decoration: none;
+    border-radius: 8px;
+    font-weight: 500;
+    font-size: 14px;
+    transition: all 0.2s ease;
+    cursor: pointer;
+  }
+  
+  /* Efeito ao passar o mouse */
+  .nav-item:hover {
+    background-color: #1E293B;
+    color: #f8fafc;
+  }
+  
+  /* Estado Ativo (Onde o usuário está clicado) */
+  .nav-item.active {
+    background-color: #2563EB; 
+    color: #ffffff;
+    font-weight: 600;
+  }
+  
+  /* Itens bloqueados para o futuro (Clientes, Vendas) */
+  .nav-item-disabled {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 16px;
+    color: #94A3B8;
+    font-size: 14px;
+    cursor: not-allowed;
+    opacity: 0.5;
+  }
+  
+  /* Rodapé da Sidebar (Configurações) */
+  .sidebar-footer {
+    margin-top: auto;
+    border-top: 1px solid #1e293b;
+    padding-top: 16px;
+  }
+
+  .sidebar-grupo {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+  }
+  
+  /* Transforma o item pai em um botão invisível alinhado horizontalmente */
+  .btn-grupo-pai {
+    background: none;
+    border: none;
+    font-family: inherit;
+    font-size: inherit;
+    width: 100%;
+    display: flex !important;
+    align-items: center;
+    justify-content: space-between; /* Joga a seta para a extrema direita */
+    cursor: pointer;
+  }
+  
+  .grupo-pai-conteudo {
+    display: flex;
+    align-items: center;
+    gap: 12px; /* Mantém a mesma distância do ícone original */
+    font-weight: 500;
+    font-size: 14px;
+  }
+  
+  /* --- Container e itens do Submenu --- */
+  .sidebar-submenu {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding-left: 20px; /* 👈 Cria o efeito de escada/recuo para os filhos */
+    margin-bottom: 4px;    
+  }
+  
+  .nav-subitem {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 12px;
+    color: #94a3b8; /* Tom cinza suave */
+    text-decoration: none;
+    font-weight: 500;
+    font-size: 14px;
+    border-radius: 6px;
+    transition: all 0.2s ease;
+  }
+  
+  .nav-subitem:hover {
+    background-color: #1e293b;
+    color: #38bdf8; /* Azul claro ao passar o mouse */
+  }
+  
+  /* Cor especial quando você estiver na rota de Inverno ou Verão */
+  .nav-subitem.active-sub {
+    background-color: #1e3a8a; /* Azul marinho Inverno */
+    color: #ffffff;
+    font-weight: 600;
+  }

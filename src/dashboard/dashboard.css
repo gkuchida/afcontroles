@@ -1,0 +1,91 @@
+/* src/dashboard/dashboard.css */
+.dashboard-container {
+    padding: 30px;
+    min-height: 100vh;
+    background-color: #f8fafc;
+    box-sizing: border-box;
+  }
+  
+  /* Painel de Boas-Vindas com o Degradê Laranja, Rosa e Azul Royal */
+  .dashboard-welcome-box {
+    background: linear-gradient(135deg, #ff7e40 0%, #ff4b91 50%, #1a42f0 100%);
+    border-radius: 16px;
+    padding: 40px;
+    color: white;
+    margin-bottom: 30px;
+    box-shadow: 0 10px 25px -5px rgba(26, 66, 240, 0.2);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  
+  .welcome-text h1 {
+    font-size: 28px;
+    font-weight: 700;
+    margin-bottom: 8px;
+  }
+  
+  .welcome-text p {
+    font-size: 16px;
+    opacity: 0.9;
+  }
+  
+  .welcome-icon-wrapper {
+    background-color: rgba(255, 255, 255, 0.15);
+    padding: 20px;
+    border-radius: 50%;
+    backdrop-filter: blur(5px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  
+  /* Grid de Atalhos Rápidos / Estatísticas */
+  .dashboard-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 20px;
+  }
+  
+  .dashboard-card {
+    background-color: white;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    transition: transform 0.2s, box-shadow 0.2s;
+  }
+  
+  .dashboard-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05);
+  }
+  
+  .card-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  
+  /* Cores dos ícones dos cards remetendo à identidade */
+  .bg-azul { background-color: rgba(26, 66, 240, 0.1); color: #1a42f0; }
+  .bg-laranja { background-color: rgba(255, 126, 64, 0.1); color: #ff7e40; }
+  .bg-rosa { background-color: rgba(255, 75, 145, 0.1); color: #ff4b91; }
+  
+  .card-info h3 {
+    font-size: 14px;
+    color: #64748b;
+    font-weight: 500;
+    margin-bottom: 4px;
+  }
+  
+  .card-info p {
+    font-size: 24px;
+    font-weight: 700;
+    color: #0f172a;
+  }

@@ -1,0 +1,305 @@
+/* src/estoque/estoque.css */
+.estoque-container {
+    padding: 24px;
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    background-color: #F8F9FA;
+    min-height: 100vh;
+  }
+  
+  /* Topo da página alinhado */
+  .estoque-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between; 
+    margin-bottom: 24px;
+    border-bottom: 2px solid #5C554E;
+    padding-bottom: 16px;
+  }
+  
+  .header-titulo {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  
+  .header-titulo h1 {
+    color: #0f172a;
+    margin: 0;
+    font-size: 24px;
+    font-weight: 600;
+  }
+  
+  /* Botão de Adicionar principal */
+  .btn-abrir-cadastro {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background-color: #1E3A8A;
+    color: white;
+    border: none;
+    padding: 10px 18px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 14px;
+    transition: background-color 0.2s;
+  }
+  
+  .btn-abrir-cadastro:hover {
+    background-color: #1E40AF;
+  }
+
+  .btn-editar{
+    color: #1E3A8A;
+  }
+  
+  /* --- ESTILO DO POP-UP (MODAL) --- */
+  .modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(15, 23, 42, 0.6); /* Fundo escurecido atrás do pop-up */
+    backdrop-filter: blur(4px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 999; /* Garante que fica na frente de tudo */
+  }
+  
+  .modal-content {
+    background-color: #ffffff;
+    width: 90%;
+    max-width: 850px;
+    padding: 24px;
+    border-radius: 12px;
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+    animation: surgindo 0.2s ease-out;
+  }
+  
+  @keyframes surgindo {
+    from { transform: scale(0.95); opacity: 0; }
+    to { transform: scale(1); opacity: 1; }
+  }
+  
+  .modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 20px;
+    border-bottom: 1px solid #e2e8f0;
+    padding-bottom: 12px;
+  }
+  
+  .modal-header h2 {
+    margin: 0;
+    font-size: 18px;
+    color: #0f172a;
+  }
+  
+  .btn-fechar-modal {
+    background: none;
+    border: none;
+    color: #94a3b8;
+    cursor: pointer;
+    padding: 4px;
+    border-radius: 6px;
+    display: flex;
+  }
+  
+  .btn-fechar-modal:hover {
+    color: #64748b;
+    background-color: #f1f5f9;
+  }
+  
+  /* Formulário dentro do Pop-up */
+  .grid-formulario {
+    display: grid;
+    grid-template-columns: 1ft 1fr; /* 2 colunas bem organizadas no pop-up */
+    gap: 32px;
+    margin: 20px 0;    
+  }
+
+  /* Cada subseção agora é um bloco independente */
+    .subsecao-form {
+        display: flex;
+        flex-direction: column;
+        gap: 16px;                      /* Espaçamento vertical entre os inputs de cada coluna */
+    }
+
+/* Mantém os inputs menores (como Altura e Largura) lado a lado na mesma linha */
+.linha-dupla {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+  
+  .col-2 {
+    grid-column: span 2;
+  }
+  
+  .campo-input {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;        
+  }
+  
+  .campo-input label {
+    font-size: 12px;
+    font-weight: 600;
+    color: #64748b;
+  }
+  
+  .campo-input input {
+    padding: 10px;
+    border: 1px solid #DBEAFE;
+    border-radius: 6px;
+    font-size: 14px;
+  }
+
+  .campo-input input:focus{
+    outline: none;
+    border-color: #60A5FA;
+    box-shadow: 0 0 0 1px #1E3A8A;
+  }
+
+  .campo-input select {
+    width: 100%;
+    height: 39px;
+    padding: 10px;
+    border: 1px solid #DBEAFE;
+    border-radius: 6px;
+    color: #1E293B;
+    background-color: #FFFFFF;
+    cursor: pointer;
+    box-sizing: border-box;
+    font-size: 14px;
+  }
+  
+  .campo-input select:focus {
+    outline: none;
+    border-color: #60A5FA;
+  }
+
+  .linha-dupla {
+    display: grid;
+    grid-template-columns: 1fr 1fr; /* Divide o espaço em duas colunas idênticas (50% cada) */
+    gap: 16px;                      /* Espaço perfeito entre os dois campos da linha */
+    align-items: end;               /* Mantém os inputs alinhados por baixo, caso as labels variem de tamanho */
+  }
+  
+  /* Garante que o input ou select dentro da linha dupla ocupe 100% da sua respectiva coluna */
+  .linha-dupla .campo-input {
+    width: 100%;
+  }
+  
+  .modal-footer {
+    margin-top: 24px;
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+    border-top: 1px solid #e2e8f0;
+    padding-top: 16px;
+  }
+  
+  .btn-cancelar {
+    background-color: #DBEAFE;
+    color: #1E40AF;
+    border: none;
+    padding: 10px 18px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 600;
+  }
+
+  .btn-cancelar:hover{
+    background-color: #BFDBFE;
+  }
+  
+  .btn-salvar {
+    background-color: #1E3A8A;
+    color: white;
+    border: none;
+    padding: 10px 18px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 600;
+  }
+
+  .btn-salvar:hover{
+    background-color:#1E40AF;
+  }
+  
+  /* --- LISTA FORMATO TABELA --- */
+  .overflow-lista {
+    overflow-x: auto;
+    padding-bottom: 8px;
+  }
+  
+  .lista-estoque {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-width: 100%; /* Mantém a largura mínima para o scroll se necessário */
+  }
+  
+  .lista-header, .lista-item {
+    display: grid;
+    /* Ajustado com valores proporcionais e mínimos para caber tudo na tela */
+    grid-template-columns: 45px 90px 3.5fr 80px 70px 70px 85px 95px 110px 110px 2fr 60px;
+    gap: 8px; /* Reduzido levemente o espaço entre colunas para respirar horizontalmente */
+    align-items: center;
+    padding: 10px 16px;
+    font-size: 14px;
+  }
+  
+  .lista-header {
+    background-color: #60A5FA;
+    border-radius: 6px;
+    font-weight: bold;
+    color: #FFFFFF;
+    font-size: 13px;    
+  }
+  
+  .lista-item {
+    background-color: #EFF6FF;
+    border-bottom: 2px solid #DBEAFE;
+    border-radius: 6px;
+    color: #334155;
+  }
+  
+  .lista-item:hover {
+    border-color: #DBEAFE;
+    background-color: #F8FAFC;
+  }
+  
+  .item-descricao {
+    font-weight: 500;
+    color: #1E293B;
+  }
+  
+  .item-categoria {
+    background-color: #DBEAFE;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: 500;
+  }
+  
+  .btn-deletar {
+    background: none;
+    border: none;
+    color: #94a3b8;
+    cursor: pointer;
+    padding: 6px;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  
+  .btn-deletar:hover {
+    color: #ef4444;
+    background-color: #fee2e2;
+  }

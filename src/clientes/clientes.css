@@ -1,0 +1,130 @@
+/* CONTAINER BASE */
+.clientes-container {
+    padding: 20px;
+    background-color: #ffffff;
+    font-family: Arial, sans-serif;
+    color: #333333;
+  }
+  
+  .titulo-secao-af {
+    font-size: 22px;
+    color: #1D3567;
+    font-weight: normal;
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  
+  .titulo-secao-af h1 {
+    font-size: 22px;
+    margin: 0;
+    font-weight: normal;
+    color: #1D3567;
+  }
+  
+  /* INPUT DE FILTRO SUPERIOR */
+  .painel-filtros-af {
+    background-color: #ffffff;
+    border: 1px solid #e2e8f0;
+    padding: 15px;
+    margin-bottom: 20px;
+    border-radius: 4px;
+  }
+  
+  .grupo-campo-af {
+    display: flex;
+    flex-direction: column;
+    width: 280px;
+  }
+  
+  .grupo-campo-af label {
+    font-size: 13px;
+    color: #666666;
+    margin-bottom: 5px;
+  }
+  
+  .grupo-campo-af input {
+    width: 100%;
+    height: 34px;
+    border: 1px solid #cccccc;
+    border-radius: 4px;
+    padding: 0 10px;
+    font-size: 14px;
+    outline: none;
+  }
+  
+  .grupo-campo-af input:focus {
+    border-color: #1D3567;
+  }
+  
+  /* ESTRUTURA GRID DA TABELA (Ajustado para evitar quebras de linha) */
+  .clientes-modulo-tabela-overflow {
+    width: 100%;
+    overflow-x: auto;
+    border: 1px solid #e2e8f0;
+    border-radius: 4px;
+  }
+  
+  .clientes-modulo-tabela-container {
+    min-width: 1250px; /* Garante espaço suficiente para todas as colunas lado a lado */
+  }
+  
+  /* Cabeçalho Corporativo Azul Marinho */
+  .clientes-modulo-linha-head {
+    background-color: #163357;
+    color: #ffffff;
+    display: grid;
+    /* Larguras milimetricamente ajustadas para as 13 colunas */
+    grid-template-columns: 85px 100px 75px 45px 140px 50px 70px 70px 70px 95px 95px 100px 1fr;
+    padding: 12px;
+    font-size: 14px;
+    align-items: center;
+  }
+  
+  .clientes-modulo-linha-head div {
+    white-space: nowrap; /* Impede terminantemente o texto de quebrar linha */
+    font-weight: normal;
+  }
+  
+  /* Linhas de registros */
+  .clientes-modulo-linha-body {
+    display: grid;
+    /* Deve ser exatamente a mesma proporção do grid de cima */
+    grid-template-columns: 85px 100px 75px 45px 140px 50px 70px 70px 70px 95px 95px 100px 1fr;
+    padding: 12px;
+    font-size: 14px;
+    border-bottom: 1px solid #f0f0f0;
+    align-items: center;
+    background-color: #ffffff;
+  }
+  
+  .clientes-modulo-linha-body:last-child {
+    border-bottom: none;
+  }
+  
+  .clientes-modulo-linha-body div {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  
+  /* Badge Quadrada de Tamanho */
+  .clientes-modulo-badge {
+    background-color: #f1f5f9;
+    border: 1px solid #cbd5e1;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: 600;
+    display: inline-block;
+    text-align: center;
+    width: 25px;
+  }
+  
+  .clientes-msg-vazia {
+    padding: 30px;
+    text-align: center;
+    color: #999999;
+    font-size: 14px;
+  }
