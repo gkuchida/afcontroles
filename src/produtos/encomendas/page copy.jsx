@@ -1,16 +1,31 @@
 import React, { useState, useEffect } from 'react';
 import { Plus, Pencil, Snowflake, X, ChevronDown, ChevronUp, Trash2, ClipboardList } from 'lucide-react';
-import { supabase } from '../../supabaseCliente'; 
 import './encomendas.css';
 
 export default function Encomendas() {
   const [isModalAberto, setIsModalAberto] = useState(false);
   const [produtoEditando, setProdutoEditando] = useState(null);
   const [itensExpandidos, setItensExpandidos] = useState({});
-  const [produtosencomendas, setProdutosencomendas] = useState([]);
+  
+  const [produtosencomendas, setProdutosencomendas] = useState(() => {
+    const salvo = localStorage.getItem('produtos_encomendas_json');
+    return salvo ? JSON.parse(salvo) : [];
+  });
+
   const [estoque, setEstoque] = useState([]);
 
-  // Estado do formulário sincronizado com o padrão do banco de dados
+  useEffect(() => {
+    const salvoEstoque = localStorage.getItem('meu_estoque_json');
+    if (salvoEstoque) {
+      setEstoque(JSON.parse(salvoEstoque));
+    }
+  }, [isModalAberto]);
+
+  useEffect(() => {
+    localStorage.setItem('produtos_encomendas_json', JSON.stringify(produtosencomendas));
+  }, [produtosencomendas]);
+  
+  // Estado inicial padrão com o campo venderPor pronto
   const [novoProduto, setNovoProduto] = useState({
     itemCodigo: '', 
     modelo: '', 
@@ -20,71 +35,9 @@ export default function Encomendas() {
     pescoco: '', 
     torax: '', 
     comprimento: '', 
-    venderPor: '', 
+    venderPor: '', // Campo que será preenchido no modal
     materiaisUsados: []
   });
-
-  // --- CARREGAR DADOS DO SUPABASE ---
-  const buscarDadosSupabase = async () => {
-    try {
-      const { data: encomendasData, error: encError } = await supabase
-        .from('encomendas')
-        .select(`
-          *,
-          materiaisUsados:encomendas_materiais(*)
-        `)
-        .order('id', { ascending: true });
-
-      if (encError) throw encError;
-
-      const dadosFormatados = (encomendasData || []).map(item => ({
-        id: item.id,
-        itemCodigo: item.item_codigo,
-        modelo: item.modelo,
-        caracteristicas: item.caracteristicas,
-        tamanho: item.tamanho,
-        pescoco: item.pescoco,
-        torax: item.torax,
-        comprimento: item.comprimento,
-        estoqueQtd: item.estoque_qtd,
-        venderPor: item.vender_por,
-        materiaisUsados: (item.materiaisUsados || []).map(m => ({
-          id: m.id,
-          estoqueId: m.estoque_id,
-          nome: m.nome,
-          largura: m.largura,
-          altura: m.altura,
-          qtdUsada: m.qtd_usada,
-          valorGasto: m.valor_gasto
-        }))
-      }));
-
-      setProdutosencomendas(dadosFormatados);
-    } catch (error) {
-      console.error("Erro ao buscar dados do Supabase:", error);
-    }
-  };
-
-  const buscarEstoque = async () => {
-    try {
-      const { data, error } = await supabase.from('estoque').select('*');
-      if (error) throw error;
-      setEstoque(data || []);
-    } catch (error) {
-      console.error("Erro ao carregar estoque:", error);
-    }
-  };
-
-  useEffect(() => {
-    buscarDadosSupabase();
-    buscarEstoque();
-  }, []);
-
-  useEffect(() => {
-    if (isModalAberto) {
-      buscarEstoque();
-    }
-  }, [isModalAberto]);
 
   // --- FUNÇÕES DE CÁLCULO ---
   const calcularCustoTotal = (materiais) => {
@@ -144,16 +97,12 @@ export default function Encomendas() {
       }
 
       const itemEstoque = estoque.find(e => String(e.id) === String(itemAlterado.estoqueId));
-      
-      // Ajustado para ler 'valorm' mapeando a sua tabela original do estoque
-      const precoM2 = itemEstoque ? parseFloat(String(itemEstoque.valorm || itemEstoque.valorUnitario || itemEstoque.preco).replace(',', '.')) || 0 : 0;
+      const precoM2 = itemEstoque ? parseFloat(String(itemEstoque.valorUnitario || itemEstoque.preco).replace(',', '.')) || 0 : 0;
       const qtdFinal = parseFloat(String(itemAlterado.qtdUsada).replace(',', '.')) || 0;
       
       itemAlterado.valorGasto = (qtdFinal * precoM2).toFixed(2);
       return itemAlterado;
     });
-
-    // CORRIGIDO: De 'materialesUsados' para 'materiaisUsados' para bater com o estado correto
     setNovoProduto({ ...novoProduto, materiaisUsados: listaAtualizada });
   };
 
@@ -167,99 +116,32 @@ export default function Encomendas() {
   const handleAbrirCadastro = () => {
     let proximoNumero = 1;
     if (produtosencomendas.length > 0) {
-      const numerosAtuais = produtosencomendas.map(p => parseInt(String(p.itemCodigo).replace('I', ''), 10) || 0);
+      const numerosAtuais = produtosencomendas.map(p => parseInt(p.itemCodigo.replace('I', ''), 10) || 0);
       proximoNumero = Math.max(...numerosAtuais) + 1;
     }
     setNovoProduto({
       itemCodigo: `I${String(proximoNumero).padStart(2, '0')}`,
-      modelo: '', caracteristicas: '', tamanho: '', estoqueQtd: '1',  pescoco: '', torax: '', comprimento: '', venderPor: '', materiaisUsados: []
+      modelo: '', caracteristicas: '', tamanho: '', estoqueQtd: '1', pescoco: '', torax: '', comprimento: '', venderPor: '', materiaisUsados: []
     });
     setIsModalAberto(true);
   };
 
-  // --- GRAVAR E ATUALIZAR NO BANCO (SUPABASE) ---
-  const handleSalvarItem = async (e) => {
+  const handleSalvarItem = (e) => {
     e.preventDefault();
-    try {
-      let encomendaIdFinal = null;
-
-      const payloadTabelaPai = {
-        item_codigo: novoProduto.itemCodigo,
-        modelo: novoProduto.modelo,
-        caracteristicas: novoProduto.caracteristicas,
-        tamanho: novoProduto.tamanho,
-        pescoco: novoProduto.pescoco,
-        torax: novoProduto.torax,
-        comprimento: novoProduto.comprimento,
-        estoque_qtd: novoProduto.estoqueQtd,
-        vender_por: novoProduto.venderPor
-      };
-
-      if (produtoEditando) {
-        encomendaIdFinal = produtoEditando.id;
-        const { error: errorUpdate } = await supabase
-          .from('encomendas')
-          .update(payloadTabelaPai)
-          .eq('id', encomendaIdFinal);
-
-        if (errorUpdate) throw errorUpdate;
-
-        const { error: errorDeleteOld } = await supabase
-          .from('encomendas_materiais')
-          .delete()
-          .eq('encomenda_id', encomendaIdFinal);
-
-        if (errorDeleteOld) throw errorDeleteOld;
-      } else {
-        const { data: insertData, error: errorInsert } = await supabase
-          .from('encomendas')
-          .insert([payloadTabelaPai])
-          .select();
-
-        if (errorInsert) throw errorInsert;
-        encomendaIdFinal = insertData[0].id;
-      }
-
-      if (novoProduto.materiaisUsados && novoProduto.materiaisUsados.length > 0) {
-        const payloadMateriais = novoProduto.materiaisUsados.map(mat => ({
-          encomenda_id: encomendaIdFinal,
-          estoque_id: String(mat.estoqueId),
-          nome: mat.nome,
-          largura: String(mat.largura),
-          altura: String(mat.altura),
-          qtd__usada: String(mat.qtdUsada), // Corrigido para bater com a tabela
-          valor_gasto: String(mat.valorGasto)
-        }));
-
-        const { error: errorFilho } = await supabase
-          .from('encomendas_materiais')
-          .insert(payloadMateriais.map(m => ({
-            encomenda_id: m.encomenda_id,
-            estoque_id: m.estoque_id,
-            nome: m.nome,
-            largura: m.largura,
-            altura: m.altura,
-            qtd_usada: m.qtd__usada,
-            valor_gasto: m.valor_gasto
-          })));
-
-        if (errorFilho) throw errorFilho;
-      }
-
-      setIsModalAberto(false);
-      setProdutoEditando(null);
-      buscarDadosSupabase();
-
-    } catch (error) {
-      console.error("Erro ao salvar no banco:", error);
-      alert("Erro ao salvar no banco: " + (error.message || error.details));
+    if (produtoEditando) {
+      setProdutosencomendas(produtosencomendas.map(p => p.id === produtoEditando.id ? novoProduto : p));
+    } else {
+      setProdutosencomendas([...produtosencomendas, { ...novoProduto, id: Date.now() }]);
     }
+    setIsModalAberto(false);
+    setProdutoEditando(null);
   };
 
   const custoModal = calcularCustoTotal(novoProduto.materiaisUsados);
   const particularModal = calcularVendaParticular(custoModal);
   const bingoModal = calcularVendaBingo(particularModal);
 
+  // Formata o valor digitado para exibir bonito "R$ X,XX" na tabela
   const formatarMoedaExibicao = (valor) => {
     if (!valor) return 'R$ 0,00';
     const numeroLimpo = parseFloat(String(valor).replace('R$', '').replace(',', '.').trim());
@@ -292,7 +174,7 @@ export default function Encomendas() {
             <div>Custo</div>
             <div>Particular</div>
             <div>Bingo</div>
-            <div style={{ fontWeight: '600' }}>Vender Por</div>
+            <div style={{ fontWeight: '600' }}>Vender Por</div> {/* Coluna de Leitura */}
             <div>Qtd</div>
             <div style={{ textAlign: 'center' }}>Ações</div>
           </div>
@@ -324,6 +206,7 @@ export default function Encomendas() {
                   <div className="particular">R$ {partNum.toFixed(2).replace('.', ',')}</div>
                   <div className="bingo">R$ {bingoNum.toFixed(2).replace('.', ',')}</div>
                   
+                  {/* TEXTO FIXO NA TABELA (NÃO EDITÁVEL AQUI) */}
                   <div style={{ fontWeight: '600', color: '#1E3A8A' }}>
                     {formatarMoedaExibicao(prod.venderPor)}
                   </div>
@@ -386,6 +269,7 @@ export default function Encomendas() {
                   <div className="linha-dupla">
                     <div className="campo-input"><label>Qtd Est.</label><input type="text" name="estoqueQtd" value={novoProduto.estoqueQtd} onChange={handleInputChange} /></div>
                     
+                    {/* EDITÁVEL APENAS AQUI DENTRO DO MODAL */}
                     <div className="campo-input">
                       <label style={{ color: '#1E3A8A', fontWeight: 'bold' }}>Vender Por (Valor Livre)</label>
                       <input 
@@ -413,10 +297,10 @@ export default function Encomendas() {
                       
                       return (
                         <div key={index} className="material">
-                          <select value={mat.estoqueId} onChange={(e) => handleMaterialChange(index, 'estoqueId', e.target.value)} required>
+                          <select value={mat.estoqueId} onChange={(e) => handleMaterialChange(index, 'estoqueId', e.target.value)}  required>
                             <option value="">-- Selecione o Material --</option>
                             {estoque.map((item, i) => (
-                              <option key={i} value={item.id || item.idItem || item.codigo}>{item.descricao || item.nome || item.material}</option>
+                              <option key={i} value={item.id || item.idItem || item.codigo}>{item.descricao || item.nome}</option>
                             ))}
                           </select>
                           <input type="text" value={mat.largura} onChange={(e) => handleMaterialChange(index, 'largura', e.target.value)} placeholder="Larg (m)" />

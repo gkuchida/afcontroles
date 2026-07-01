@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Plus, Pencil, Package, X } from 'lucide-react';
 // CORREÇÃO 1: Importe a instância do 'supabase' exportada pelo seu arquivo de configuração
-import { supabase } from './supabaseCliente'; 
+import { supabase } from '../supabaseCliente';
 import './estoque.css';
 
 export default function Estoque() {

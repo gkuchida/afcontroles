@@ -1,48 +1,75 @@
 import React, { useState, useEffect } from 'react';
 import { Plus, Pencil, Snowflake, X, ChevronDown, ChevronUp, Trash2 } from 'lucide-react';
+import { supabase } from '../../supabaseCliente';
 import './artesanato.css';
 
 export default function Artesanato() {
   const [isModalAberto, setIsModalAberto] = useState(false);
   const [produtoEditando, setProdutoEditando] = useState(null);
   const [itensExpandidos, setItensExpandidos] = useState({});
-  
-  const [produtosartesanato, setProdutosartesanato] = useState(() => {
-    const salvo = localStorage.getItem('produtos_artesanato_json');
-    return salvo ? JSON.parse(salvo) : [];
-  });
-
+  const [produtosartesanato, setProdutosartesanato] = useState([]);
   const [estoque, setEstoque] = useState([]);
 
+  // 1. CARREGAR DADOS DO SUPABASE (PRODUTOS E ESTOQUE)
+  const buscarDadosSupabase = async () => {
+    try {
+      // Busca os produtos trazendo a lista de materiais usando o relacionamento estruturado no SQL
+      const { data: artesanatoData, error: artError } = await supabase
+        .from('artesanato')
+        .select(`
+          *,
+          materiaisUsados:artesanato_materiais(*)
+        `)
+        .order('id', { ascending: true });
+
+      if (artError) throw artError;
+
+      // Busca a tabela de estoque (para alimentar o Select de materiais no Modal)
+      const { data: estoqueData, error: estError } = await supabase
+        .from('estoque')
+        .select('*');
+
+      if (estError) throw estError;
+
+      setProdutosartesanato(artesanatoData || []);
+      setEstoque(estoqueData || []);
+    } catch (error) {
+      console.error("Erro ao carregar banco do Supabase:", error);
+      alert("Erro ao carregar dados do banco de dados.");
+    }
+  };
+
   useEffect(() => {
-    const salvoEstoque = localStorage.getItem('meu_estoque_json');
-    if (salvoEstoque) {
-      setEstoque(JSON.parse(salvoEstoque));
+    buscarDadosSupabase();
+  }, []);
+
+  // Recarregar o estoque ao abrir o modal para garantir dados atualizados
+  useEffect(() => {
+    if (isModalAberto) {
+      supabase.from('estoque').select('*').then(({ data }) => {
+        if (data) setEstoque(data);
+      });
     }
   }, [isModalAberto]);
 
-  useEffect(() => {
-    localStorage.setItem('produtos_artesanato_json', JSON.stringify(produtosartesanato));
-  }, [produtosartesanato]);
-  
-  // Estado inicial padrão com o campo venderPor pronto
+  // Estado inicial padrão
   const [novoProduto, setNovoProduto] = useState({
-    itemCodigo: '', 
+    itemcodigo: '', 
     modelo: '', 
     caracteristicas: '', 
     tamanho: '', 
-    estoqueQtd: '1', 
+    estoqueqtd: '1', 
     pescoco: '', 
     torax: '', 
     comprimento: '', 
-    venderPor: '', // Campo que será preenchido no modal
+    venderpor: '', 
     materiaisUsados: []
   });
 
   // --- FUNÇÕES DE CÁLCULO ---
   const calcularCustoTotal = (materiais) => {
     if (!materiais) return 0;
-    return materiais.reduce((acc, m) => acc + (parseFloat(m.valorGasto) || 0), 0);
+    return materiais.reduce((acc, m) => acc + (parseFloat(m.valorgasto) || 0), 0);
   };
 
   const calcularVendaParticular = (custo) => {
@@ -70,7 +97,7 @@ export default function Artesanato() {
       ...novoProduto,
       materiaisUsados: [
         ...novoProduto.materiaisUsados,
-        { estoqueId: '', nome: '', largura: '', altura: '', qtdUsada: '', valorGasto: '0.00' }
+        { estoque_id: '', nome: '', largura: '', altura: '', qtdusada: '', valorgasto: '0.00' }
       ]
     });
   };
@@ -80,27 +107,24 @@ export default function Artesanato() {
       if (i !== index) return mat;
       let itemAlterado = { ...mat, [campo]: valor };
 
-      if (campo === 'estoqueId') {
-        const selecionado = estoque.find(e => 
-          String(e.id) === String(valor) || 
-          String(e.idItem) === String(valor) || 
-          String(e.codigo) === String(valor)
-        );
-        itemAlterado.nome = selecionado ? (selecionado.descricao || selecionado.nome || selecionado.material) : '';
+      if (campo === 'estoque_id') {
+        const selecionado = estoque.find(e => String(e.id) === String(valor));
+        itemAlterado.nome = selecionado ? (selecionado.descricao || selecionado.material) : '';
       }
 
       const alt = parseFloat(String(itemAlterado.altura).replace(',', '.')) || 0;
       const larg = parseFloat(String(itemAlterado.largura).replace(',', '.')) || 0;
 
       if (alt > 0 && larg > 0) {
-        itemAlterado.qtdUsada = String((alt * larg).toFixed(4)).replace('.', ',');
+        itemAlterado.qtdusada = String((alt * larg).toFixed(4)).replace('.', ',');
       }
 
-      const itemEstoque = estoque.find(e => String(e.id) === String(itemAlterado.estoqueId));
-      const precoM2 = itemEstoque ? parseFloat(String(itemEstoque.valorUnitario || itemEstoque.preco).replace(',', '.')) || 0 : 0;
-      const qtdFinal = parseFloat(String(itemAlterado.qtdUsada).replace(',', '.')) || 0;
+      const itemEstoque = estoque.find(e => String(e.id) === String(itemAlterado.estoque_id));
+      // Mapeado exatamente para a coluna 'valorm' identificada na imagem da sua tabela estoque
+      const precoM2 = itemEstoque ? parseFloat(String(itemEstoque.valorm).replace(',', '.')) || 0 : 0;
+      const qtdFinal = parseFloat(String(itemAlterado.qtdusada).replace(',', '.')) || 0;
       
-      itemAlterado.valorGasto = (qtdFinal * precoM2).toFixed(2);
+      itemAlterado.valorgasto = (qtdFinal * precoM2).toFixed(2);
       return itemAlterado;
     });
     setNovoProduto({ ...novoProduto, materiaisUsados: listaAtualizada });
@@ -116,32 +140,99 @@ export default function Artesanato() {
   const handleAbrirCadastro = () => {
     let proximoNumero = 1;
     if (produtosartesanato.length > 0) {
-      const numerosAtuais = produtosartesanato.map(p => parseInt(p.itemCodigo.replace('I', ''), 10) || 0);
+      const numerosAtuais = produtosartesanato.map(p => {
+        if (!p.itemcodigo) return 0;
+        return parseInt(p.itemcodigo.replace('I', ''), 10) || 0;
+      });
       proximoNumero = Math.max(...numerosAtuais) + 1;
     }
     setNovoProduto({
-      itemCodigo: `I${String(proximoNumero).padStart(2, '0')}`,
-      modelo: '', caracteristicas: '', tamanho: '', estoqueQtd: '1', pescoco: '', torax: '', comprimento: '', venderPor: '', materiaisUsados: []
+      itemcodigo: `I${String(proximoNumero).padStart(2, '0')}`,
+      modelo: '', caracteristicas: '', tamanho: '', estoqueqtd: '1', pescoco: '', torax: '', comprimento: '', venderpor: '', materiaisUsados: []
     });
     setIsModalAberto(true);
   };
 
-  const handleSalvarItem = (e) => {
+  // 2. SALVAR NO SUPABASE (CORRIGIDO)
+  const handleSalvarItem = async (e) => {
     e.preventDefault();
-    if (produtoEditando) {
-      setProdutosartesanato(produtosartesanato.map(p => p.id === produtoEditando.id ? novoProduto : p));
-    } else {
-      setProdutosartesanato([...produtosartesanato, { ...novoProduto, id: Date.now() }]);
+    
+    const dadosProduto = {
+      itemcodigo: novoProduto.itemcodigo,
+      modelo: novoProduto.modelo,
+      caracteristicas: novoProduto.caracteristicas,
+      tamanho: novoProduto.tamanho,
+      estoqueqtd: parseInt(novoProduto.estoqueqtd, 10) || 0,
+      pescoco: novoProduto.pescoco,
+      torax: novoProduto.torax,
+      comprimento: novoProduto.comprimento,
+      venderpor: novoProduto.venderpor
+    };
+
+    try {
+      let idArtesanatoFinal = null;
+
+      if (produtoEditando) {
+        // MODO EDIÇÃO (UPDATE)
+        const { error: artError } = await supabase
+          .from('artesanato')
+          .update(dadosProduto)
+          .eq('id', produtoEditando.id);
+
+        if (artError) throw artError;
+        idArtesanatoFinal = produtoEditando.id;
+
+        // Remove os materiais antigos vinculados para reinserir a lista atualizada
+        const { error: delError } = await supabase
+          .from('artesanato_materiais')
+          .delete()
+          .eq('artesanato_id', idArtesanatoFinal);
+
+        if (delError) throw delError;
+      } else {
+        // MODO CADASTRO (INSERT) - Erro de comentário de sintaxe resolvido aqui
+        const { data: insertData, error: artError } = await supabase
+          .from('artesanato')
+          .insert([dadosProduto])
+          .select();
+
+        if (artError) throw artError;
+        idArtesanatoFinal = insertData[0].id;
+      }
+
+      // Salva os materiais da composição vinculando-os ao ID gerado do artesanato
+      if (novoProduto.materiaisUsados && novoProduto.materiaisUsados.length > 0) {
+        const payloadMateriais = novoProduto.materiaisUsados.map(m => ({
+          artesanato_id: idArtesanatoFinal,
+          estoque_id: m.estoque_id ? parseInt(m.estoque_id, 10) : null,
+          nome: m.nome,
+          largura: m.largura,
+          altura: m.altura,
+          qtdusada: m.qtdusada,
+          valorgasto: parseFloat(m.valorgasto) || 0
+        }));
+
+        const { error: matError } = await supabase
+          .from('artesanato_materiais')
+          .insert(payloadMateriais);
+
+        if (matError) throw matError;
+      }
+
+      alert("Produto salvo com sucesso!");
+      setIsModalAberto(false);
+      setProdutoEditando(null);
+      buscarDadosSupabase(); 
+    } catch (error) {
+      console.error("Erro ao salvar produto:", error);
+      alert(`Erro ao salvar no banco: ${error.message}`);
     }
-    setIsModalAberto(false);
-    setProdutoEditando(null);
   };
 
   const custoModal = calcularCustoTotal(novoProduto.materiaisUsados);
   const particularModal = calcularVendaParticular(custoModal);
   const bingoModal = calcularVendaBingo(particularModal);
 
-  // Formata o valor digitado para exibir bonito "R$ X,XX" na tabela
   const formatarMoedaExibicao = (valor) => {
     if (!valor) return 'R$ 0,00';
     const numeroLimpo = parseFloat(String(valor).replace('R$', '').replace(',', '.').trim());
@@ -161,7 +252,6 @@ export default function Artesanato() {
       {/* Tabela Geral */}
       <div className="overflow-lista">
         <div className="lista-estoque">
-          
           <div className="lista-header grid-tabela-artesanato">
             <div></div>
             <div>Item</div>
@@ -174,7 +264,7 @@ export default function Artesanato() {
             <div>Custo</div>
             <div>Particular</div>
             <div>Bingo</div>
-            <div style={{ fontWeight: '600' }}>Vender Por</div> {/* Coluna de Leitura */}
+            <div style={{ fontWeight: '600' }}>Vender Por</div>
             <div>Qtd</div>
             <div style={{ textAlign: 'center' }}>Ações</div>
           </div>
@@ -187,38 +277,28 @@ export default function Artesanato() {
 
             return (
               <div key={prod.id} className="container-item-artesanato">
-                
                 <div className="lista-item grid-tabela-artesanato" onClick={() => toggleExpandir(prod.id)} >
                   <div className="seta-expandir">{estaExpandido ? <ChevronUp size={16} /> : <ChevronDown size={16} />}</div>
-                  <div>{prod.itemCodigo}</div>
+                  <div>{prod.itemcodigo}</div>
                   <div>{prod.modelo}</div>
-                  
-                  <div title={prod.caracteristicas}>
-                    {prod.caracteristicas}
-                  </div>
-                  
+                  <div title={prod.caracteristicas}>{prod.caracteristicas}</div>
                   <div><span className="badge-tamanho">{prod.tamanho || '-'}</span></div>
                   <div>{prod.pescoco || '-'}</div>
                   <div>{prod.torax || '-'}</div>
                   <div>{prod.comprimento || '-'}</div>
-                  
                   <div className="valor-custo-dinamico">R$ {custoNum.toFixed(2).replace('.', ',')}</div>
                   <div className="particular">R$ {partNum.toFixed(2).replace('.', ',')}</div>
                   <div className="bingo">R$ {bingoNum.toFixed(2).replace('.', ',')}</div>
-                  
-                  {/* TEXTO FIXO NA TABELA (NÃO EDITÁVEL AQUI) */}
                   <div style={{ fontWeight: '600', color: '#1E3A8A' }}>
-                    {formatarMoedaExibicao(prod.venderPor)}
+                    {formatarMoedaExibicao(prod.venderpor)}
                   </div>
-
-                  <div>{prod.estoqueQtd} un</div>
-                  
+                  <div>{prod.estoqueqtd} un</div>
                   <div onClick={(e) => e.stopPropagation()}>
                     <button onClick={() => { setProdutoEditando(prod); setNovoProduto(prod); setIsModalAberto(true); }} className="btn-editar"><Pencil size={16} /></button>
                   </div>
                 </div>
 
-                {estaExpandido && (
+                {estaExpandido && prod.materiaisUsados && (
                   <div className="painel-materiais-composicao">
                     <div className="grade-sublista-header">
                       <div>Material</div> <div>Largura (m)</div> <div>Altura (m)</div> <div>Qtd Usada</div> <div>Valor Gasto</div>
@@ -228,8 +308,8 @@ export default function Artesanato() {
                         <div className="nome-mat-sublista">{mat.nome || "Não especificado"}</div>
                         <div>{mat.largura || '-'}</div>
                         <div>{mat.altura || '-'}</div>
-                        <div>{mat.qtdUsada}</div>
-                        <div className="preco-mat-sublista">R$ {parseFloat(mat.valorGasto || 0).toFixed(2).replace('.', ',')}</div>
+                        <div>{mat.qtdusada}</div>
+                        <div className="preco-mat-sublista">R$ {parseFloat(mat.valorgasto || 0).toFixed(2).replace('.', ',')}</div>
                       </div>
                     ))}
                   </div>
@@ -245,40 +325,28 @@ export default function Artesanato() {
         <div className="modal-overlay">
           <div className="modal-content">
             <div className="modal-header">
-              <h2>{produtoEditando ? `Editar ${produtoEditando.itemCodigo}` : "Novo Produto artesanato"}</h2>
+              <h2>{produtoEditando ? `Editar ${produtoEditando.itemcodigo}` : "Novo Produto artesanato"}</h2>
               <button type="button" className="btn-fechar-modal" onClick={() => setIsModalAberto(false)}><X size={20} /></button>
             </div>
             
             <form onSubmit={handleSalvarItem}>
               <div className="grid-formulario">
-                
                 <div className="subsecao-form">
                   <div className="campo-input"><label>Modelo</label><input type="text" name="modelo" value={novoProduto.modelo} onChange={handleInputChange} required /></div>
                   <div className="campo-input"><label>Características</label><input type="text" name="caracteristicas" value={novoProduto.caracteristicas} onChange={handleInputChange} required /></div>
-                  
                   <div className="linha-dupla">
                     <div className="campo-input"><label>Pescoço</label><input type="text" name="pescoco" value={novoProduto.pescoco} onChange={handleInputChange} /></div>
                     <div className="campo-input"><label>Tórax</label><input type="text" name="torax" value={novoProduto.torax} onChange={handleInputChange} /></div>
                   </div>
-
                   <div className="linha-dupla">
                     <div className="campo-input"><label>Comprimento</label><input type="text" name="comprimento" value={novoProduto.comprimento} onChange={handleInputChange} /></div>
                     <div className="campo-input"><label>Tam.</label><input type="text" name="tamanho" value={novoProduto.tamanho} onChange={handleInputChange} /></div>
                   </div>
-                  
                   <div className="linha-dupla">
-                    <div className="campo-input"><label>Qtd Est.</label><input type="text" name="estoqueQtd" value={novoProduto.estoqueQtd} onChange={handleInputChange} /></div>
-                    
-                    {/* EDITÁVEL APENAS AQUI DENTRO DO MODAL */}
+                    <div className="campo-input"><label>Qtd Est.</label><input type="text" name="estoqueqtd" value={novoProduto.estoqueqtd} onChange={handleInputChange} /></div>
                     <div className="campo-input">
                       <label style={{ color: '#1E3A8A', fontWeight: 'bold' }}>Vender Por (Valor Livre)</label>
-                      <input 
-                        type="text" 
-                        name="venderPor" 
-                        value={novoProduto.venderPor || ''} 
-                        onChange={handleInputChange} 
-                        placeholder="Ex: 25,00" 
-                      />
+                      <input type="text" name="venderpor" value={novoProduto.venderpor || ''} onChange={handleInputChange} placeholder="Ex: 25,00" />
                     </div>
                   </div>
                 </div>
@@ -297,16 +365,16 @@ export default function Artesanato() {
                       
                       return (
                         <div key={index} className="material">
-                          <select value={mat.estoqueId} onChange={(e) => handleMaterialChange(index, 'estoqueId', e.target.value)}  required>
+                          <select value={mat.estoque_id || ''} onChange={(e) => handleMaterialChange(index, 'estoque_id', e.target.value)} required>
                             <option value="">-- Selecione o Material --</option>
                             {estoque.map((item, i) => (
-                              <option key={i} value={item.id || item.idItem || item.codigo}>{item.descricao || item.nome}</option>
+                              <option key={i} value={item.id}>{item.descricao || item.material}</option>
                             ))}
                           </select>
-                          <input type="text" value={mat.largura} onChange={(e) => handleMaterialChange(index, 'largura', e.target.value)} placeholder="Larg (m)" />
-                          <input type="text" value={mat.altura} onChange={(e) => handleMaterialChange(index, 'altura', e.target.value)} placeholder="Alt (m)" />
-                          <input type="text" value={mat.qtdUsada} onChange={(e) => handleMaterialChange(index, 'qtdUsada', e.target.value)} placeholder="Qtd Usada" disabled={temDimensaoCompleta} />
-                          <div className="valor">R$ {parseFloat(mat.valorGasto || 0).toFixed(2).replace('.', ',')}</div>
+                          <input type="text" value={mat.largura || ''} onChange={(e) => handleMaterialChange(index, 'largura', e.target.value)} placeholder="Larg (m)" />
+                          <input type="text" value={mat.altura || ''} onChange={(e) => handleMaterialChange(index, 'altura', e.target.value)} placeholder="Alt (m)" />
+                          <input type="text" value={mat.qtdusada || ''} onChange={(e) => handleMaterialChange(index, 'qtdusada', e.target.value)} placeholder="Qtd Usada" disabled={temDimensaoCompleta} />
+                          <div className="valor">R$ {parseFloat(mat.valorgasto || 0).toFixed(2).replace('.', ',')}</div>
                           <button type="button" onClick={() => handleRemoverMaterialLinha(index)} style={{ background: 'none', border: 'none', color: '#EF4444' }}><Trash2 size={15} /></button>
                         </div>
                       );
@@ -319,7 +387,6 @@ export default function Artesanato() {
                     <div className="calculosvalorbingo"><span>Venda Bingo:</span><strong>R$ {bingoModal.toFixed(2).replace('.', ',')}</strong></div>
                   </div>
                 </div>
-
               </div>
               <div className="modal-footer">
                 <button type="button" className="btn-cancelar" onClick={() => setIsModalAberto(false)}>Cancelar</button>
