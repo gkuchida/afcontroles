@@ -11,6 +11,7 @@ import Artesanato from './produtos/artesanato/page.jsx';
 import Encomendas from './produtos/encomendas/page.jsx';
 import Vendas from './vendas/page.jsx';
 import Clientes from './clientes/page.jsx';
+import Fidelidade from './fidelidade/page.jsx';
 
 function App() {
   // 1) O ESTADO REAL E CRU DO SEU ESTOQUE FICA AQUI AGORA:
@@ -69,7 +70,13 @@ function App() {
             <Route 
               path="/clientes" 
               element={<Clientes produtosEstoque={produtosEstoque} setProdutosEstoque={setProdutosEstoque} />} 
-            />            
+            />     
+
+            {/* 10) Passa a MESMA lista real para a página de Fidelidade ler no seu select */}
+            <Route 
+              path="/fidelidade" 
+              element={<Fidelidade produtosEstoque={produtosEstoque} setProdutosEstoque={setProdutosEstoque} />} 
+            />         
             </Routes>
 
         </main>

@@ -1,9 +1,12 @@
 /* src/dashboard/dashboard.css */
-.dashboard-container {
-    padding: 30px;
+.dashboard-container {    
+    padding: 12px;
     min-height: 100vh;
+    width: 170vh;
+    box-sizing: border-box;
     background-color: #f8fafc;
     box-sizing: border-box;
+    
   }
   
   /* Painel de Boas-Vindas com o Degradê Laranja, Rosa e Azul Royal */

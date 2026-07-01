@@ -1,16 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { Plus, Pencil, Package, X } from 'lucide-react';
+// CORREÇÃO 1: Importe a instância do 'supabase' exportada pelo seu arquivo de configuração
+import { supabase } from './supabaseCliente'; 
 import './estoque.css';
 
 export default function Estoque() {
-  // Inicializa lendo o JSON. Se não houver nada, começa vazio [].
-  const [estoque, setEstoque] = useState(() => {
-    const salvo = localStorage.getItem('meu_estoque_json');
-    return salvo ? JSON.parse(salvo) : [];
-  });
-
+  const [estoque, setEstoque] = useState([]);
   const [isModalAberto, setIsModalAberto] = useState(false);
   const [itemSendoEditado, setItemSendoEditado] = useState(null);
+  const [loading, setLoading] = useState(true);
   
   const [novoItem, setNovoItem] = useState({
     categoria: '', descricao: '', material: '', cor: '', altura: '',
@@ -18,12 +16,30 @@ export default function Estoque() {
     quantidadeEstoque: '', observacoes: ''
   });
 
-  // Salva no JSON automaticamente sempre que o estoque mudar
-  useEffect(() => {
-    localStorage.setItem('meu_estoque_json', JSON.stringify(estoque));
-  }, [estoque]);
+  // 1. CARREGAR DADOS DO SUPABASE AO ABRIR A PÁGINA
+  const buscarEstoque = async () => {
+    try {
+      setLoading(true);
+      const { data, error } = await supabase
+        .from('estoque')
+        .select('*')
+        .order('id', { ascending: true });
 
-  // Bloco corrigido: Cálculos automáticos de Área e Valor por m²
+      if (error) throw error;
+      setEstoque(data || []);
+    } catch (error) {
+      console.error('Erro ao buscar dados do Supabase:', error.message);
+      alert('Erro ao carregar dados do banco de dados.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    buscarEstoque();
+  }, []);
+
+  // 2. CÁLCULOS AUTOMÁTICOS DE ÁREA E VALOR POR M²
   useEffect(() => {
     const alt = parseFloat(novoItem.altura.replace(',', '.'));
     const larg = parseFloat(novoItem.largura.replace(',', '.'));
@@ -60,13 +76,23 @@ export default function Estoque() {
 
   const handlePrepararEdicao = (item) => {
     setItemSendoEditado(item);
-    setNovoItem(item);
+    setNovoItem({
+      ...item,
+      altura: item.altura ? String(item.altura).replace('.', ',') : '',
+      largura: item.largura ? String(item.largura).replace('.', ',') : '',
+      areaQuantidade: item.area ? String(item.area).replace('.', ',') : '',
+      valorPago: item.pago ? String(item.pago).replace('.', ',') : '',
+      valorUnitario: item.valorm ? String(item.valorm).replace('.', ',') : '',
+      quantidadeEstoque: item.qtdestoque ? String(item.qtdestoque).replace('.', ',') : '',
+      descricao: item.descricao || '',
+      observacoes: item.observacoes || ''
+    });
     setIsModalAberto(true);
   };
 
   const handleAbrirCadastro = () => {
     const proximoNumero = estoque.length > 0 
-      ? Math.max(...estoque.map(item => Number(item.num) || 0)) + 1 
+      ? Math.max(...estoque.map(item => Number(item.id) || 0)) + 1 
       : 1;
 
     const numeroFormatado = String(proximoNumero).padStart(2, '0');
@@ -97,34 +123,61 @@ export default function Estoque() {
     });
   };
 
-  const handleSalvarItem = (e) => {
+  const tratarNumero = (valor) => {
+    if (!valor) return null;
+    const formatado = parseFloat(String(valor).replace(',', '.'));
+    return isNaN(formatado) ? null : formatado;
+  };
+
+  // 3. SALVAR / ATUALIZAR DIRETAMENTE NO SUPABASE
+  const handleSalvarItem = async (e) => {
     e.preventDefault();
-    if (!novoItem.descricao || novoItem.descricao.trim() === "") return alert("Por favor, preencha a descrição!");
+    if (!novoItem.descricao || novoItem.descricao.trim() === "") {
+      return alert("Por favor, preencha a descrição!");
+    }
     
     const qtdEstoqueFinal = novoItem.quantidadeEstoque || novoItem.areaQuantidade;
 
-    if (itemSendoEditado) {
-      setEstoque(estoque.map(item => 
-        item.id === itemSendoEditado.id 
-          ? { ...novoItem, quantidadeEstoque: qtdEstoqueFinal } 
-          : item
-      ));
-    } else {
-      const proximoNumero = estoque.length > 0 
-        ? Math.max(...estoque.map(item => Number(item.num) || 0)) + 1 
-        : 1;
+    // Criando o mapeamento exato com as colunas da sua imagem no Supabase
+    const dadosParaO_Banco = {
+      categoria: novoItem.categoria || 'Outros',
+      descricao: novoItem.descricao,
+      material: novoItem.material || null,
+      altura: tratarNumero(novoItem.altura) || 0,
+      largura: tratarNumero(novoItem.largura) || 0,
+      area: tratarNumero(novoItem.areaQuantidade) || 0,
+      pago: tratarNumero(novoItem.valorPago) || 0,
+      valorm: tratarNumero(novoItem.valorUnitario) || 0,
+      qtdestoque: tratarNumero(qtdEstoqueFinal) || 0,
+      observacao: novoItem.observacoes || '' // CORREÇÃO: Enviando como 'observacao' (singular) conforme a tabela
+    };
 
-      const itemProntoComPK = {
-        ...novoItem,
-        id: Date.now(),
-        num: proximoNumero,
-        quantidadeEstoque: qtdEstoqueFinal
-      };
+    try {
+      if (itemSendoEditado) {
+        // Modo Edição (UPDATE)
+        const { error } = await supabase
+          .from('estoque')
+          .update(dadosParaO_Banco)
+          .eq('id', itemSendoEditado.id);
 
-      setEstoque([...estoque, itemProntoComPK]);
+        if (error) throw error;
+      } else {
+        // Modo Cadastro (INSERT)
+        const { error } = await supabase
+          .from('estoque')
+          .insert([dadosParaO_Banco]);
+
+        if (error) throw error;
+      }
+
+      // Recarrega a lista e fecha o modal
+      buscarEstoque();
+      handleFecharModal();
+      alert('Item salvo com sucesso!');
+    } catch (error) {
+      console.error('Erro detalhado do Supabase:', error);
+      alert(`Erro ao salvar no banco: ${error.message || error.details}`);
     }
-    
-    handleFecharModal();
   };
 
   const temMedidas = novoItem.altura && novoItem.largura;
@@ -132,13 +185,11 @@ export default function Estoque() {
 
   return (
     <div className="estoque-container">
-      
       <header className="estoque-header">
         <div className="header-titulo">
           <Package size={24} color="#1E293B" />
           <h1>Estoque ({estoque.length} itens)</h1>
         </div>        
-        
         <button className="btn-abrir-cadastro" onClick={handleAbrirCadastro} title="Novo Item">
           <Plus size={20} />
         </button>
@@ -147,9 +198,8 @@ export default function Estoque() {
       {isModalAberto && (
         <div className="modal-overlay">
           <div className="modal-content">
-            
             <div className="modal-header">
-              <h2>{itemSendoEditado ? `Atualizar Item Nº ${itemSendoEditado.num}` : "Cadastrar Novo Item"}</h2>
+              <h2>{itemSendoEditado ? `Atualizar Item Nº ${itemSendoEditado.id}` : "Cadastrar Novo Item"}</h2>
               <button type="button" className="btn-fechar-modal" onClick={handleFecharModal}>
                 <X size={20} color="#64748B" />
               </button>
@@ -157,12 +207,10 @@ export default function Estoque() {
 
             <form onSubmit={handleSalvarItem}>
               <div className="grid-formulario">
-                
-                {/* Coluna 1: Identificação do Produto */}
                 <div className="subsecao-form col-2">
                   <div className="campo-input">
                     <label>Categoria</label>
-                    <select name="categoria"                    
+                    <select name="categoria"                      
                       value={novoItem.categoria} 
                       onChange={handleInputChange}
                       className="select-customizado"
@@ -179,7 +227,7 @@ export default function Estoque() {
                   <div className="linha-dupla">
                     <div className="campo-input">
                       <label>Material</label>
-                      <select name="material"                    
+                      <select name="material"                      
                         value={novoItem.material} 
                         onChange={handleInputChange}
                         className="select-customizado"
@@ -192,12 +240,12 @@ export default function Estoque() {
                         <option value="Moletom">Moletom</option>
                         <option value="NylonE">Nylon Emborrachado</option> 
                         <option value="Nylon7">Nylon 70</option>   
-                        <option value="Pele">Pele</option>                                                 
+                        <option value="Pele">Pele</option>                                                                                                                                                                                
                         <option value="Ribana">Ribana</option>                      
-                        <option value="Soft">Soft</option>                                                    
+                        <option value="Soft">Soft</option>                                                                                                                                                                                
                         <option value="TricolineE">Tricoline Estampado</option>                      
                         <option value="TricolineF">Tricoline Festivo</option>           
-                        <option value="TricolineL">Tricoline Liso</option>                                                                                   
+                        <option value="TricolineL">Tricoline Liso</option>                                                                                                                                                                                                                                                                                                                        
                       </select>
                     </div>
                     <div className="campo-input">
@@ -206,15 +254,12 @@ export default function Estoque() {
                     </div>
                   </div>
                   
-
                   <div className="campo-input">
                     <label>Descrição</label>
                     <input type="text" name="descricao" value={novoItem.descricao} onChange={handleInputChange} placeholder="Ex: S01 - Soft Rosa" />
                   </div>
-
                 </div>
 
-                {/* Coluna 2: Métricas e Dimensões */}
                 <div className="subsecao-form col-2">
                   <div className="linha-dupla">
                     <div className="campo-input">
@@ -268,7 +313,6 @@ export default function Estoque() {
                     <input type="text" name="observacoes" value={novoItem.observacoes} onChange={handleInputChange} placeholder="Notes..." />
                   </div>
                 </div>
-
               </div>
 
               <div className="modal-footer">
@@ -280,7 +324,6 @@ export default function Estoque() {
                 </button>
               </div>
             </form>
-
           </div>
         </div>
       )}
@@ -302,31 +345,37 @@ export default function Estoque() {
             <div style={{ textAlign: 'center' }}>Ações</div>
           </div>
 
-          {estoque.map((item) => (
-            <div className="lista-item" key={item.id}>
-              <div style={{ fontWeight: 'bold', color: '#1E293B' }}>{item.num}</div>
-              <div><span className="item-categoria">{item.categoria || 'Geral'}</span></div>
-              <div className="item-descricao">{item.descricao}</div>
-              <div>{item.material || '-'}</div>
-              <div>{item.altura || '-'}</div>
-              <div>{item.largura || '-'}</div>
-              <div>{item.areaQuantidade || '-'}</div>
-              <div>{item.valorPago ? `R$ ${item.valorPago}` : '-'}</div>
-              <div>{item.valorUnitario ? `R$ ${item.valorUnitario}` : '-'}</div>
-              <div>{item.quantidadeEstoque || '-'}</div>
-              <div style={{ color: '#64748b', fontSize: '13px' }}>{item.observacoes || ''}</div>
-              
-              <div style={{ display: 'flex', justifyContent: 'center' }}>
-                <button 
-                  onClick={() => handlePrepararEdicao(item)} 
-                  className="btn-editar" 
-                  title="Editar Item" 
-                >
-                  <Pencil size={16} />
-                </button>
+          {loading ? (
+            <div style={{ padding: '20px', textAlign: 'center', color: '#64748B' }}>Carregando dados da nuvem...</div>
+          ) : estoque.length === 0 ? (
+            <div style={{ padding: '20px', textAlign: 'center', color: '#64748B' }}>Nenhum item cadastrado no estoque.</div>
+          ) : (
+            estoque.map((item) => (
+              <div className="lista-item" key={item.id}>
+                <div style={{ fontWeight: 'bold', color: '#1E293B' }}>{item.id}</div>
+                <div><span className="item-categoria">{item.categoria || 'Geral'}</span></div>
+                <div className="item-descricao">{item.descricao}</div>
+                <div>{item.material || '-'}</div>
+                <div>{item.altura !== null ? String(item.altura).replace('.', ',') : '-'}</div>
+                <div>{item.largura !== null ? String(item.largura).replace('.', ',') : '-'}</div>
+                <div>{item.area !== null ? String(item.area).replace('.', ',') : '-'}</div>
+                <div>{item.pago !== null ? `R$ ${String(item.pago).replace('.', ',')}` : '-'}</div>
+                <div>{item.valorm !== null ? `R$ ${String(item.valorm).replace('.', ',')}` : '-'}</div>
+                <div>{item.qtdestoque !== null ? String(item.qtdestoque).replace('.', ',') : '-'}</div>
+                <div style={{ color: '#64748b', fontSize: '13px' }}>{item.observacoes || ''}</div>
+                
+                <div style={{ display: 'flex', justifyContent: 'center' }}>
+                  <button 
+                    onClick={() => handlePrepararEdicao(item)} 
+                    className="btn-editar" 
+                    title="Editar Item" 
+                  >
+                    <Pencil size={16} />
+                  </button>
+                </div>
               </div>
-            </div>
-          ))}
+            ))
+          )}
         </div>
       </div>
     </div>

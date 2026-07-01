@@ -1,15 +1,45 @@
-/* Sidebar Fixa na Esquerda */
-.sidebar {
+/* ==========================================================================
+   LAYOUT PRINCIPAL (Isso evita que o conteúdo entre embaixo da sidebar)
+   ========================================================================== */
+
+   .app-container {
+    display: flex;
+    width: 100%;
+    min-height: 100vh;
+  }
+  
+  .main-content {
+    flex-grow: 1;
+    /* 260px da largura da sidebar + 24px de respiro. 
+       Isso empurra seu conteúdo perfeitamente para a direita */
+    margin-left: 260px; 
+    padding: 24px;
+    box-sizing: border-box;
+    background-color: #f8fafc; /* Um fundo cinza claro padrão para o sistema */
+    overflow-x: hidden; /* Evita quebras de tela horizontais */
+  }
+  
+  /* ==========================================================================
+     SIDEBAR (Ajustada e Corrigida)
+     ========================================================================== */
+  
+  /* Sidebar Fixa na Esquerda */
+  .sidebar {
     width: 260px;
     min-width: 260px; 
-    background-color: #1E293B; /* Azul escuro quase preto professional */
+    background-color: #1E293B; 
     color: #f8fafc;
     display: flex;
     flex-direction: column;
     padding: 24px 16px;
-    height: 100vh; /* Ocupa exatamente a altura total da janela */
+    height: 100vh; 
     box-sizing: border-box;
-    border-right: 1px solid #1e293b;
+    border-right: 1px solid #334155; /* 👈 Ajustado: cor levemente mais clara que o fundo para aparecer */
+    position: fixed; 
+    left: 0;         
+    top: 0;          
+    bottom: 0;
+    z-index: 100; /* 👈 Garante que ela fique sempre acima do conteúdo ao scrollar */
   }
   
   /* Área da Logo / Nome do Sistema */
@@ -18,7 +48,7 @@
     align-items: center;
     gap: 12px;
     padding-bottom: 24px;
-    border-bottom: 1px solid #1e293b;
+    border-bottom: 1px solid #334155; /* 👈 Ajustado para a cor correta da borda */
     margin-bottom: 24px;
   }
   
@@ -34,10 +64,11 @@
     display: flex;
     flex-direction: column;
     gap: 8px;
-    flex-grow: 1; /* Empurra o botão de configurações para o final */
+    flex-grow: 1; 
+    overflow-y: auto;
   }
-
-  .sidebar-pack{
+  
+  .sidebar-pack {
     background-color: #60A5FA;
     padding: 5px;
     border-radius: 6px;
@@ -49,7 +80,7 @@
     align-items: center;
     gap: 12px;
     padding: 12px 16px;
-    color: #94A3B8; /* Cor cinza discreta para itens normais */
+    color: #94A3B8; 
     text-decoration: none;
     border-radius: 8px;
     font-weight: 500;
@@ -60,7 +91,7 @@
   
   /* Efeito ao passar o mouse */
   .nav-item:hover {
-    background-color: #1E293B;
+    background-color: #334155; /* 👈 Ajustado: Corrigido o hover para um tom mais claro que o fundo antigo */
     color: #f8fafc;
   }
   
@@ -83,13 +114,14 @@
     opacity: 0.5;
   }
   
-  /* Rodapé da Sidebar (Configurações) */
+  /* Rodapé da Sidebar (Configurações) - Removido o duplicado e unificado */
   .sidebar-footer {
-    margin-top: auto;
-    border-top: 1px solid #1e293b;
+    margin-top: auto; 
+    border-top: 1px solid #334155; 
     padding-top: 16px;
+    width: 100%;
   }
-
+  
   .sidebar-grupo {
     display: flex;
     flex-direction: column;
@@ -105,14 +137,14 @@
     width: 100%;
     display: flex !important;
     align-items: center;
-    justify-content: space-between; /* Joga a seta para a extrema direita */
+    justify-content: space-between; 
     cursor: pointer;
   }
   
   .grupo-pai-conteudo {
     display: flex;
     align-items: center;
-    gap: 12px; /* Mantém a mesma distância do ícone original */
+    gap: 12px; 
     font-weight: 500;
     font-size: 14px;
   }
@@ -122,7 +154,7 @@
     display: flex;
     flex-direction: column;
     gap: 4px;
-    padding-left: 20px; /* 👈 Cria o efeito de escada/recuo para os filhos */
+    padding-left: 20px; 
     margin-bottom: 4px;    
   }
   
@@ -131,7 +163,7 @@
     align-items: center;
     gap: 10px;
     padding: 8px 12px;
-    color: #94a3b8; /* Tom cinza suave */
+    color: #94a3b8; 
     text-decoration: none;
     font-weight: 500;
     font-size: 14px;
@@ -140,13 +172,13 @@
   }
   
   .nav-subitem:hover {
-    background-color: #1e293b;
-    color: #38bdf8; /* Azul claro ao passar o mouse */
+    background-color: #334155; /* 👈 Ajustado para consistência */
+    color: #38bdf8; 
   }
   
   /* Cor especial quando você estiver na rota de Inverno ou Verão */
   .nav-subitem.active-sub {
-    background-color: #1e3a8a; /* Azul marinho Inverno */
+    background-color: #1e3a8a; 
     color: #ffffff;
     font-weight: 600;
   }

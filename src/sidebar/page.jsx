@@ -13,7 +13,8 @@ import {
   ChevronUp,
   CloudSun,  
   ClipboardList,
-  Cpu
+  Cpu,
+  Gift
 } from 'lucide-react';
 import './sidebar.css';
 
@@ -90,23 +91,32 @@ export default function Sidebar() {
             </div>
           )}
         </div>
-        {/* Vendas */}
-        <NavLink to="/vendas" className={({ isActive }) => isActive ? "nav-item active" : "nav-item"}>
-          <ShoppingCart size={20} />
-          Vendas
-        </NavLink>
+
+        {/* Fidelidade */}
+        <NavLink to="/fidelidade" className={({ isActive }) => isActive ? "nav-item active" : "nav-item"}>
+          <Gift size={20} />
+          Fidelidade
+        </NavLink> 
 
         {/* Clientes */}
         <NavLink to="/clientes" className={({ isActive }) => isActive ? "nav-item active" : "nav-item"}>
           <Users size={20} />
           Clientes
+        </NavLink> 
+
+        {/* Vendas */}
+        <NavLink to="/vendas" className={({ isActive }) => isActive ? "nav-item active" : "nav-item"}>
+          <ShoppingCart size={20} />
+          Vendas
         </NavLink>
-        
       </nav>
 
-      <div className="nav-item" style={{ marginTop: 'auto', borderTop: '1px solid #1e293b', paddingTop: '20px' }}>
-        <Settings size={20} /> Configurações
-      </div>
+      <footer className="sidebar-footer">
+        <NavLink to="/configuracoes" className={({ isActive }) => isActive ? "nav-item active" : "nav-item"}>
+          <Settings size={20} />
+          Configurações
+        </NavLink>
+      </footer>
     </aside>
   );
 }

@@ -153,7 +153,7 @@ export default function Artesanato() {
       <header className="estoque-header">
         <div className="header-titulo">
           <Snowflake size={24} color="#1E3A8A" />
-          <h1>Modelos artesanato ({produtosartesanato.length})</h1>
+          <h1>Modelos Artesanato ({produtosartesanato.length})</h1>
         </div>        
         <button className="btn-abrir-cadastro" onClick={handleAbrirCadastro}><Plus size={20} /></button>
       </header>

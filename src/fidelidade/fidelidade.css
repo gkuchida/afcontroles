@@ -1,0 +1,288 @@
+/* ==========================================================================
+   Configurações Globais e Resetação
+   ========================================================================== */
+   * {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+  }
+  
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background-color: #f8fafc;
+    color: #334155;
+    padding: 24px;
+  }
+  
+  /* Container Principal */
+  .fidelidade-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+  }
+  
+  /* ==========================================================================
+     Cabeçalho
+     ========================================================================== */
+  .fidelidade-header {
+    background: linear-gradient(135deg, #1D3567, #1d4ed8);
+    color: #ffffff;
+    padding: 32px;
+    border-radius: 16px;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  }
+  
+  .fidelidade-header h1 {
+    font-size: 28px;
+    font-weight: 700;
+    margin-bottom: 6px;
+  }
+  
+  .fidelidade-header p {
+    color: #bfdbfe;
+    font-size: 16px;
+  }
+  
+  /* ==========================================================================
+     Layout em Duas Colunas (Formulário + Saldos)
+     ========================================================================== */
+  .fidelidade-conteudo {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 24px;
+  }
+  
+  @media (min-width: 992px) {
+    .fidelidade-conteudo {
+      grid-template-columns: 350px 1fr;
+    }
+  }
+  
+  /* Estilo padrão para os cards das seções */
+  .secao-cadastro, .secao-saldos, .secao-historico {
+    background-color: #ffffff;
+    border-radius: 16px;
+    padding: 24px;
+    border: 1px solid #e2e8f0;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  }
+  
+  .secao-cadastro h2, .secao-saldos h2, .secao-historico h2 {
+    font-size: 18px;
+    color: #1e293b;
+    margin-bottom: 20px;
+    font-weight: 600;
+  }
+  
+  /* ==========================================================================
+     Formulário de Cadastro
+     ========================================================================== */
+  .form-compra {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+  
+  .form-grupo {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  
+  .form-grupo label {
+    font-size: 14px;
+    font-weight: 500;
+    color: #64748b;
+  }
+  
+  .form-grupo input {
+    padding: 10px 14px;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    font-size: 14px;
+    color: #334155;
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+  }
+  
+  .form-grupo input:focus {
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+  }
+  
+  .btn-registrar {
+    background-color: #1D3567;
+    color: #ffffff;
+    border: none;
+    padding: 12px;
+    font-size: 14px;
+    font-weight: 600;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+    margin-top: 8px;
+  }
+  
+  .btn-registrar:hover {
+    background-color: #1d4ed8;
+  }
+  
+  /* ==========================================================================
+     Tabelas e Listagens
+     ========================================================================== */
+  .tabela-wrapper {
+    overflow-x: auto;
+  }
+  
+  .tabela-fidelidade, .tabela-historico {
+    width: 100%;
+    border-collapse: collapse;
+    text-align: left;
+    font-size: 14px;
+  }
+  
+  .tabela-fidelidade th, .tabela-historico th {
+    background-color: #f8fafc;
+    color: #64748b;
+    padding: 12px 16px;
+    font-weight: 600;
+    border-bottom: 2px solid #e2e8f0;
+  }
+  
+  .tabela-fidelidade td, .tabela-historico td {
+    padding: 16px;
+    border-bottom: 1px solid #f1f5f9;
+    color: #475569;
+  }
+  
+  .tabela-fidelidade tr:hover, .tabela-historico tr:hover {
+    background-color: #f8fafc;
+  }
+  
+  .col-nome {
+    font-weight: 600;
+    color: #1e293b !important;
+  }
+  
+  .sem-dados {
+    text-align: center;
+    color: #94a3b8;
+    padding: 32px !important;
+    font-style: italic;
+  }
+  
+  /* ==========================================================================
+     Badges, Status e Botões de Ação da Tabela
+     ========================================================================== */
+  
+  /* Quando falta valor para a meta */
+  .badge-meta {
+    background-color: #dcfce7;
+    color: #15803d;
+    padding: 4px 8px;
+    border-radius: 6px;
+    font-weight: 600;
+    font-size: 12px;
+  }
+  
+  /* Quando tem prêmio disponível */
+  .badge-premio {
+    background-color: #fef3c7;
+    color: #92400e;
+    padding: 6px 10px;
+    border-radius: 20px;
+    font-weight: 700;
+    font-size: 12px;
+    display: inline-block;
+    border: 1px solid #fde68a;
+    animation: pulso 2s infinite;
+  }
+  
+  .sem-premio {
+    color: #94a3b8;
+    font-size: 13px;
+  }
+  
+  /* Botão de Entregar Prêmio */
+  .btn-entregar {
+    background-color: #10b981;
+    color: #ffffff;
+    border: none;
+    padding: 8px 12px;
+    font-size: 12px;
+    font-weight: 600;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+  }
+  
+  .btn-entregar:hover:not(:disabled) {
+    background-color: #059669;
+  }
+  
+  .btn-entregar:disabled {
+    background-color: #f1f5f9;
+    color: #94a3b8;
+    cursor: not-allowed;
+  }
+  
+  /* ==========================================================================
+     Histórico Bruto (Rodapé)
+     ========================================================================== */
+  .historico-wrapper {
+    max-height: 250px;
+    overflow-y: auto;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+  }
+  
+  /* Garante que o topo da tabela fique fixo ao rolar o histórico */
+  .tabela-historico th {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    box-shadow: inset 0 -1px 0 #e2e8f0;
+  }
+
+  /* Alinha o título e a busca na mesma linha */
+.historico-header-acoes {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+  
+  .historico-header-acoes h2 {
+    margin: 0;
+  }
+  
+  /* Estilo do input de busca */
+  .input-busca-historico {
+    padding: 10px 16px;
+    width: 280px;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    font-size: 14px;
+    font-family: inherit;
+    outline: none;
+    transition: all 0.2s ease;
+    background-color: #ffffff;
+  }
+  
+  .input-busca-historico:focus {
+    border-color: #2563eb;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+  }
+  
+  /* ==========================================================================
+     Animações
+     ========================================================================== */
+  @keyframes pulso {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.03); box-shadow: 0 0 0 4px rgba(251, 191, 36, 0.2); }
+    100% { transform: scale(1); }
+  }

@@ -1,36 +1,29 @@
-// src/estoque/page.jsx
 import React, { useState, useEffect } from 'react';
 import { Plus, Pencil, Package, X } from 'lucide-react';
 import './estoque.css';
 
-export default function Estoque({produtosEstoque, setProdutosEstoque}) {
+export default function Estoque() {
+  // Inicializa lendo o JSON. Se não houver nada, começa vazio [].
+  const [estoque, setEstoque] = useState(() => {
+    const salvo = localStorage.getItem('meu_estoque_json');
+    return salvo ? JSON.parse(salvo) : [];
+  });
+
   const [isModalAberto, setIsModalAberto] = useState(false);
   const [itemSendoEditado, setItemSendoEditado] = useState(null);
-
-  const [estoque, setEstoque] = useState([
-    {
-      id: 1,
-      num: 1,
-      categoria: "Tecido",
-      descricao: "S01 - Soft Rosa Ursinhos Daiza",
-      material: "Soft",
-      altura: "1,00",
-      largura: "1,60",
-      areaQuantidade: "1,6",
-      valorPago: "11,90",
-      valorUnitario: "7,44",
-      quantidadeEstoque: "1,60",
-      observacoes: ""
-    }
-  ]);
-
+  
   const [novoItem, setNovoItem] = useState({
-    categoria: '', descricao: '', material: '', altura: '',
+    categoria: '', descricao: '', material: '', cor: '', altura: '',
     largura: '', areaQuantidade: '', valorPago: '', valorUnitario: '',
     quantidadeEstoque: '', observacoes: ''
   });
 
-  // --- AUTOMATIZAÇÃO INTELIGENTE (Área e Valor/m²) ---
+  // Salva no JSON automaticamente sempre que o estoque mudar
+  useEffect(() => {
+    localStorage.setItem('meu_estoque_json', JSON.stringify(estoque));
+  }, [estoque]);
+
+  // Bloco corrigido: Cálculos automáticos de Área e Valor por m²
   useEffect(() => {
     const alt = parseFloat(novoItem.altura.replace(',', '.'));
     const larg = parseFloat(novoItem.largura.replace(',', '.'));
@@ -71,18 +64,16 @@ export default function Estoque({produtosEstoque, setProdutosEstoque}) {
     setIsModalAberto(true);
   };
 
-  // --- NOVA FUNÇÃO: CALCULA O ID E INICIA O CAMPO DESCRIÇÃO ---
   const handleAbrirCadastro = () => {
     const proximoNumero = estoque.length > 0 
       ? Math.max(...estoque.map(item => Number(item.num) || 0)) + 1 
       : 1;
 
-    // Formata o número para ter 2 dígitos (ex: 1 vira "01", 2 vira "02")
     const numeroFormatado = String(proximoNumero).padStart(2, '0');
 
     setNovoItem({
       categoria: '', 
-      descricao: `${numeroFormatado} - `, // Já inicia com o número automático
+      descricao: `${numeroFormatado} - `, 
       material: '', 
       cor: '',
       altura: '',
@@ -100,7 +91,7 @@ export default function Estoque({produtosEstoque, setProdutosEstoque}) {
     setIsModalAberto(false);
     setItemSendoEditado(null);
     setNovoItem({
-      categoria: '', descricao: '', material: '', altura: '',
+      categoria: '', descricao: '', material: '', cor: '', altura: '',
       largura: '', areaQuantidade: '', valorPago: '', valorUnitario: '',
       quantidadeEstoque: '', observacoes: ''
     });
@@ -147,14 +138,12 @@ export default function Estoque({produtosEstoque, setProdutosEstoque}) {
           <Package size={24} color="#1E293B" />
           <h1>Estoque ({estoque.length} itens)</h1>
         </div>        
-          
-
+        
         <button className="btn-abrir-cadastro" onClick={handleAbrirCadastro} title="Novo Item">
           <Plus size={20} />
         </button>
       </header>
 
-      {/* --- POP-UP REESTRUTURADO --- */}
       {isModalAberto && (
         <div className="modal-overlay">
           <div className="modal-content">
@@ -187,11 +176,11 @@ export default function Estoque({produtosEstoque, setProdutosEstoque}) {
                     </select>
                   </div>
                  
-                 <div className="linha-dupla">
-                  <div className="campo-input">
+                  <div className="linha-dupla">
+                    <div className="campo-input">
                       <label>Material</label>
                       <select name="material"                    
-                        value={novoItem.categoria} 
+                        value={novoItem.material} 
                         onChange={handleInputChange}
                         className="select-customizado"
                       >
@@ -203,19 +192,19 @@ export default function Estoque({produtosEstoque, setProdutosEstoque}) {
                         <option value="Moletom">Moletom</option>
                         <option value="NylonE">Nylon Emborrachado</option> 
                         <option value="Nylon7">Nylon 70</option>   
-                        <option value="Pele">Pele</option>                                         
+                        <option value="Pele">Pele</option>                                                 
                         <option value="Ribana">Ribana</option>                      
-                        <option value="Soft">Soft</option>                                          
+                        <option value="Soft">Soft</option>                                                    
                         <option value="TricolineE">Tricoline Estampado</option>                      
                         <option value="TricolineF">Tricoline Festivo</option>           
-                        <option value="TricolineL">Tricoline Liso</option>                                                                 
+                        <option value="TricolineL">Tricoline Liso</option>                                                                                   
                       </select>
                     </div>
                     <div className="campo-input">
                       <label>Cor</label>
                       <input type="text" name="cor" value={novoItem.cor} onChange={handleInputChange} placeholder="Ex: Azul bebê" />                    
+                    </div>
                   </div>
-                 </div>
                   
 
                   <div className="campo-input">
@@ -269,14 +258,14 @@ export default function Estoque({produtosEstoque, setProdutosEstoque}) {
                       />
                     </div>
                     <div className="campo-input">
-                      <label>Estoque <span style={{fontSize: '11px', color: '#64748B'}}></span></label>
+                      <label>Estoque</label>
                       <input type="text" name="quantidadeEstoque" value={novoItem.quantidadeEstoque} onChange={handleInputChange} placeholder="Vazio usa a Área" />
                     </div>
                   </div>
 
                   <div className="campo-input">
                     <label>Observações</label>
-                    <input type="text" name="observacoes" value={novoItem.observacoes} onChange={handleInputChange} placeholder="Notas adicionais..." />
+                    <input type="text" name="observacoes" value={novoItem.observacoes} onChange={handleInputChange} placeholder="Notes..." />
                   </div>
                 </div>
 
@@ -296,7 +285,6 @@ export default function Estoque({produtosEstoque, setProdutosEstoque}) {
         </div>
       )}
 
-      {/* --- EXIBIÇÃO DA LISTA REFINADA --- */}
       <div className="overflow-lista">
         <div className="lista-estoque">
           <div className="lista-header">
