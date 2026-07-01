@@ -1,48 +1,75 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Pencil, Snowflake, X, ChevronDown, ChevronUp, Trash2, Sun } from 'lucide-react';
+import { Plus, Pencil, X, ChevronDown, ChevronUp, Trash2, Sun } from 'lucide-react';
+import { supabase } from '../../supabaseCliente'; 
 import './verao.css';
 
 export default function Verao() {
   const [isModalAberto, setIsModalAberto] = useState(false);
   const [produtoEditando, setProdutoEditando] = useState(null);
   const [itensExpandidos, setItensExpandidos] = useState({});
-  
-  const [produtosverao, setProdutosverao] = useState(() => {
-    const salvo = localStorage.getItem('produtos_verao_json');
-    return salvo ? JSON.parse(salvo) : [];
-  });
-
+  const [produtosverao, setProdutosverao] = useState([]);
   const [estoque, setEstoque] = useState([]);
 
+  // 1. CARREGAR DADOS DO SUPABASE
+  const buscarDadosSupabase = async () => {
+    try {
+      const { data: veraoData, error: vError } = await supabase
+        .from('verao')
+        .select(`
+          *,
+          materiaisUsados:verao_materiais(*)
+        `)
+        .order('id', { ascending: true });
+
+      if (vError) throw vError;
+
+      const { data: estoqueData, error: estError } = await supabase
+        .from('estoque')
+        .select('*');
+
+      if (estError) throw estError;
+
+      setProdutosverao(veraoData || []);
+      setEstoque(estoqueData || []);
+    } catch (error) {
+      console.error("Erro ao carregar banco do Supabase:", error);
+      alert("Erro ao carregar dados do banco de dados.");
+    }
+  };
+
   useEffect(() => {
-    const salvoEstoque = localStorage.getItem('meu_estoque_json');
-    if (salvoEstoque) {
-      setEstoque(JSON.parse(salvoEstoque));
+    buscarDadosSupabase();
+  }, []);
+
+  useEffect(() => {
+    if (isModalAberto) {
+      supabase.from('estoque').select('*').then(({ data }) => {
+        if (data) setEstoque(data);
+      });
     }
   }, [isModalAberto]);
 
-  useEffect(() => {
-    localStorage.setItem('produtos_verao_json', JSON.stringify(produtosverao));
-  }, [produtosverao]);
-  
-  // Estado inicial padrão com o campo venderPor pronto
+  // Estado inicial padrão do componente React
   const [novoProduto, setNovoProduto] = useState({
-    itemCodigo: '', 
+    item_codigo: '', 
     modelo: '', 
     caracteristicas: '', 
     tamanho: '', 
-    estoqueQtd: '1', 
+    estoqueqtd: '1', 
     pescoco: '', 
     torax: '', 
     comprimento: '', 
-    venderPor: '', // Campo que será preenchido no modal
+    venderpor: '', 
     materiaisUsados: []
   });
 
   // --- FUNÇÕES DE CÁLCULO ---
   const calcularCustoTotal = (materiais) => {
     if (!materiais) return 0;
-    return materiais.reduce((acc, m) => acc + (parseFloat(m.valorGasto) || 0), 0);
+    return materiais.reduce((acc, m) => {
+      const valor = m.valor_gasto !== undefined ? m.valor_gasto : m.valorgasto;
+      return acc + (parseFloat(valor) || 0);
+    }, 0);
   };
 
   const calcularVendaParticular = (custo) => {
@@ -70,7 +97,7 @@ export default function Verao() {
       ...novoProduto,
       materiaisUsados: [
         ...novoProduto.materiaisUsados,
-        { estoqueId: '', nome: '', largura: '', altura: '', qtdUsada: '', valorGasto: '0.00' }
+        { estoque_id: '', nome: '', largura: '', altura: '', qtdusada: '', valorgasto: '0.00' }
       ]
     });
   };
@@ -80,27 +107,23 @@ export default function Verao() {
       if (i !== index) return mat;
       let itemAlterado = { ...mat, [campo]: valor };
 
-      if (campo === 'estoqueId') {
-        const selecionado = estoque.find(e => 
-          String(e.id) === String(valor) || 
-          String(e.idItem) === String(valor) || 
-          String(e.codigo) === String(valor)
-        );
-        itemAlterado.nome = selecionado ? (selecionado.descricao || selecionado.nome || selecionado.material) : '';
+      if (campo === 'estoque_id') {
+        const selecionado = estoque.find(e => String(e.id) === String(valor));
+        itemAlterado.nome = selecionado ? (selecionado.descricao || selecionado.material) : '';
       }
 
       const alt = parseFloat(String(itemAlterado.altura).replace(',', '.')) || 0;
       const larg = parseFloat(String(itemAlterado.largura).replace(',', '.')) || 0;
 
       if (alt > 0 && larg > 0) {
-        itemAlterado.qtdUsada = String((alt * larg).toFixed(4)).replace('.', ',');
+        itemAlterado.qtdusada = String((alt * larg).toFixed(4)).replace('.', ',');
       }
 
-      const itemEstoque = estoque.find(e => String(e.id) === String(itemAlterado.estoqueId));
-      const precoM2 = itemEstoque ? parseFloat(String(itemEstoque.valorUnitario || itemEstoque.preco).replace(',', '.')) || 0 : 0;
-      const qtdFinal = parseFloat(String(itemAlterado.qtdUsada).replace(',', '.')) || 0;
+      const itemEstoque = estoque.find(e => String(e.id) === String(itemAlterado.estoque_id));
+      const precoM2 = itemEstoque ? parseFloat(String(itemEstoque.valorm).replace(',', '.')) || 0 : 0;
+      const qtdFinal = parseFloat(String(itemAlterado.qtdusada).replace(',', '.')) || 0;
       
-      itemAlterado.valorGasto = (qtdFinal * precoM2).toFixed(2);
+      itemAlterado.valorgasto = (qtdFinal * precoM2).toFixed(2);
       return itemAlterado;
     });
     setNovoProduto({ ...novoProduto, materiaisUsados: listaAtualizada });
@@ -116,32 +139,97 @@ export default function Verao() {
   const handleAbrirCadastro = () => {
     let proximoNumero = 1;
     if (produtosverao.length > 0) {
-      const numerosAtuais = produtosverao.map(p => parseInt(p.itemCodigo.replace('I', ''), 10) || 0);
+      const numerosAtuais = produtosverao.map(p => {
+        if (!p.item_codigo) return 0;
+        return parseInt(p.item_codigo.replace('V', ''), 10) || 0;
+      });
       proximoNumero = Math.max(...numerosAtuais) + 1;
     }
     setNovoProduto({
-      itemCodigo: `I${String(proximoNumero).padStart(2, '0')}`,
-      modelo: '', caracteristicas: '', tamanho: '', estoqueQtd: '1', pescoco: '', torax: '', comprimento: '', venderPor: '', materiaisUsados: []
+      item_codigo: `V${String(proximoNumero).padStart(2, '0')}`,
+      modelo: '', caracteristicas: '', tamanho: '', estoqueqtd: '1', pescoco: '', torax: '', comprimento: '', venderpor: '', materiaisUsados: []
     });
     setIsModalAberto(true);
   };
 
-  const handleSalvarItem = (e) => {
+  // 2. SALVAR NO SUPABASE
+  const handleSalvarItem = async (e) => {
     e.preventDefault();
-    if (produtoEditando) {
-      setProdutosverao(produtosverao.map(p => p.id === produtoEditando.id ? novoProduto : p));
-    } else {
-      setProdutosverao([...produtosverao, { ...novoProduto, id: Date.now() }]);
+    
+    const dadosProduto = {
+      item_codigo: novoProduto.item_codigo,
+      modelo: novoProduto.modelo,
+      caracteristicas: novoProduto.caracteristicas,
+      tamanho: novoProduto.tamanho,
+      estoque_qtd: parseInt(novoProduto.estoqueqtd, 10) || 0, 
+      pescoco: novoProduto.pescoco,
+      torax: novoProduto.torax,
+      comprimento: novoProduto.comprimento,
+      vender_por: novoProduto.venderpor 
+    };
+
+    try {
+      let idVeraoFinal = null;
+
+      if (produtoEditando) {
+        // MODO EDIÇÃO (UPDATE)
+        const { error: vError } = await supabase
+          .from('verao')
+          .update(dadosProduto)
+          .eq('id', produtoEditando.id);
+
+        if (vError) throw vError;
+        idVeraoFinal = produtoEditando.id;
+
+        const { error: delError } = await supabase
+          .from('verao_materiais')
+          .delete()
+          .eq('verao_id', idVeraoFinal);
+
+        if (delError) throw delError;
+      } else {
+        // MODO CADASTRO (INSERT)
+        const { data: insertData, error: vError } = await supabase
+          .from('verao')
+          .insert([dadosProduto])
+          .select();
+
+        if (vError) throw vError;
+        idVeraoFinal = insertData[0].id;
+      }
+
+      if (novoProduto.materiaisUsados && novoProduto.materiaisUsados.length > 0) {
+        const payloadMateriais = novoProduto.materiaisUsados.map(m => ({
+          verao_id: idVeraoFinal,
+          estoque_id: m.estoque_id ? parseInt(m.estoque_id, 10) : null,
+          nome: m.nome,
+          largura: m.largura,
+          altura: m.altura,
+          qtd_usada: m.qtdusada || m.qtd_usada, 
+          valor_gasto: parseFloat(m.valorgasto || m.valor_gasto) || 0 
+        }));
+
+        const { error: matError } = await supabase
+          .from('verao_materiais')
+          .insert(payloadMateriais);
+
+        if (matError) throw matError;
+      }
+
+      alert("Produto salvo com sucesso!");
+      setIsModalAberto(false);
+      setProdutoEditando(null);
+      buscarDadosSupabase(); 
+    } catch (error) {
+      console.error("Erro ao salvar produto:", error);
+      alert(`Erro ao salvar no banco: ${error.message}`);
     }
-    setIsModalAberto(false);
-    setProdutoEditando(null);
   };
 
   const custoModal = calcularCustoTotal(novoProduto.materiaisUsados);
   const particularModal = calcularVendaParticular(custoModal);
   const bingoModal = calcularVendaBingo(particularModal);
 
-  // Formata o valor digitado para exibir bonito "R$ X,XX" na tabela
   const formatarMoedaExibicao = (valor) => {
     if (!valor) return 'R$ 0,00';
     const numeroLimpo = parseFloat(String(valor).replace('R$', '').replace(',', '.').trim());
@@ -161,7 +249,6 @@ export default function Verao() {
       {/* Tabela Geral */}
       <div className="overflow-lista">
         <div className="lista-estoque">
-          
           <div className="lista-header grid-tabela-verao">
             <div></div>
             <div>Item</div>
@@ -174,7 +261,7 @@ export default function Verao() {
             <div>Custo</div>
             <div>Particular</div>
             <div>Bingo</div>
-            <div style={{ fontWeight: '600' }}>Vender Por</div> {/* Coluna de Leitura */}
+            <div style={{ fontWeight: '600' }}>Vender Por</div>
             <div>Qtd</div>
             <div style={{ textAlign: 'center' }}>Ações</div>
           </div>
@@ -184,54 +271,67 @@ export default function Verao() {
             const partNum = calcularVendaParticular(custoNum);
             const bingoNum = calcularVendaBingo(partNum);
             const estaExpandido = itensExpandidos[prod.id];
+            
+            const quantidadeExibida = prod.estoque_qtd !== undefined ? prod.estoque_qtd : prod.estoqueqtd;
+            const valorVendaExibido = prod.vender_por !== undefined ? prod.vender_por : prod.venderpor;
 
             return (
               <div key={prod.id} className="container-item-verao">
-                
                 <div className="lista-item grid-tabela-verao" onClick={() => toggleExpandir(prod.id)} >
                   <div className="seta-expandir">{estaExpandido ? <ChevronUp size={16} /> : <ChevronDown size={16} />}</div>
-                  <div>{prod.itemCodigo}</div>
+                  <div>{prod.item_codigo}</div>
                   <div>{prod.modelo}</div>
-                  
-                  <div title={prod.caracteristicas}>
-                    {prod.caracteristicas}
-                  </div>
-                  
+                  <div title={prod.caracteristicas}>{prod.caracteristicas}</div>
                   <div><span className="badge-tamanho">{prod.tamanho || '-'}</span></div>
                   <div>{prod.pescoco || '-'}</div>
                   <div>{prod.torax || '-'}</div>
                   <div>{prod.comprimento || '-'}</div>
-                  
                   <div className="valor-custo-dinamico">R$ {custoNum.toFixed(2).replace('.', ',')}</div>
                   <div className="particular">R$ {partNum.toFixed(2).replace('.', ',')}</div>
                   <div className="bingo">R$ {bingoNum.toFixed(2).replace('.', ',')}</div>
-                  
-                  {/* TEXTO FIXO NA TABELA (NÃO EDITÁVEL AQUI) */}
                   <div style={{ fontWeight: '600', color: '#1E3A8A' }}>
-                    {formatarMoedaExibicao(prod.venderPor)}
+                    {formatarMoedaExibicao(valorVendaExibido)}
                   </div>
-
-                  <div>{prod.estoqueQtd} un</div>
-                  
+                  <div>{quantidadeExibida || 0} un</div>
                   <div onClick={(e) => e.stopPropagation()}>
-                    <button onClick={() => { setProdutoEditando(prod); setNovoProduto(prod); setIsModalAberto(true); }} className="btn-editar"><Pencil size={16} /></button>
+                    <button onClick={() => { 
+                      setProdutoEditando(prod); 
+                      const materiaisTratados = (prod.materiaisUsados || []).map(m => ({
+                        ...m,
+                        qtdusada: m.qtd_usada !== undefined ? m.qtd_usada : m.qtdusada,
+                        valorgasto: m.valor_gasto !== undefined ? m.valor_gasto : m.valorgasto,
+                        estoque_id: m.estoque_id !== undefined ? m.estoque_id : m.estoqueId
+                      }));
+
+                      setNovoProduto({
+                        ...prod,
+                        estoqueqtd: String(quantidadeExibida || 0),
+                        venderpor: String(valorVendaExibido || ''),
+                        materiaisUsados: materiaisTratados
+                      }); 
+                      setIsModalAberto(true); 
+                    }} className="btn-editar"><Pencil size={16} /></button>
                   </div>
                 </div>
 
-                {estaExpandido && (
+                {estaExpandido && prod.materiaisUsados && (
                   <div className="painel-materiais-composicao">
                     <div className="grade-sublista-header">
                       <div>Material</div> <div>Largura (m)</div> <div>Altura (m)</div> <div>Qtd Usada</div> <div>Valor Gasto</div>
                     </div>
-                    {prod.materiaisUsados.map((mat, i) => (
-                      <div className="grade-sublista-linha" key={i}>
-                        <div className="nome-mat-sublista">{mat.nome || "Não especificado"}</div>
-                        <div>{mat.largura || '-'}</div>
-                        <div>{mat.altura || '-'}</div>
-                        <div>{mat.qtdUsada}</div>
-                        <div className="preco-mat-sublista">R$ {parseFloat(mat.valorGasto || 0).toFixed(2).replace('.', ',')}</div>
-                      </div>
-                    ))}
+                    {prod.materiaisUsados.map((mat, i) => {
+                      const qtd_linha = mat.qtd_usada !== undefined ? mat.qtd_usada : mat.qtdusada;
+                      const gasto_linha = mat.valor_gasto !== undefined ? mat.valor_gasto : mat.valorgasto;
+                      return (
+                        <div className="grade-sublista-linha" key={i}>
+                          <div className="nome-mat-sublista">{mat.nome || "Não especificado"}</div>
+                          <div>{mat.largura || '-'}</div>
+                          <div>{mat.altura || '-'}</div>
+                          <div>{qtd_linha}</div>
+                          <div className="preco-mat-sublista">R$ {parseFloat(gasto_linha || 0).toFixed(2).replace('.', ',')}</div>
+                        </div>
+                      );
+                    })}
                   </div>
                 )}
               </div>
@@ -245,40 +345,28 @@ export default function Verao() {
         <div className="modal-overlay">
           <div className="modal-content">
             <div className="modal-header">
-              <h2>{produtoEditando ? `Editar ${produtoEditando.itemCodigo}` : "Novo Produto verao"}</h2>
+              <h2>{produtoEditando ? `Editar ${produtoEditando.item_codigo}` : "Novo Produto Verão"}</h2>
               <button type="button" className="btn-fechar-modal" onClick={() => setIsModalAberto(false)}><X size={20} /></button>
             </div>
             
             <form onSubmit={handleSalvarItem}>
               <div className="grid-formulario">
-                
                 <div className="subsecao-form">
                   <div className="campo-input"><label>Modelo</label><input type="text" name="modelo" value={novoProduto.modelo} onChange={handleInputChange} required /></div>
                   <div className="campo-input"><label>Características</label><input type="text" name="caracteristicas" value={novoProduto.caracteristicas} onChange={handleInputChange} required /></div>
-                  
                   <div className="linha-dupla">
                     <div className="campo-input"><label>Pescoço</label><input type="text" name="pescoco" value={novoProduto.pescoco} onChange={handleInputChange} /></div>
                     <div className="campo-input"><label>Tórax</label><input type="text" name="torax" value={novoProduto.torax} onChange={handleInputChange} /></div>
                   </div>
-
                   <div className="linha-dupla">
                     <div className="campo-input"><label>Comprimento</label><input type="text" name="comprimento" value={novoProduto.comprimento} onChange={handleInputChange} /></div>
                     <div className="campo-input"><label>Tam.</label><input type="text" name="tamanho" value={novoProduto.tamanho} onChange={handleInputChange} /></div>
                   </div>
-                  
                   <div className="linha-dupla">
-                    <div className="campo-input"><label>Qtd Est.</label><input type="text" name="estoqueQtd" value={novoProduto.estoqueQtd} onChange={handleInputChange} /></div>
-                    
-                    {/* EDITÁVEL APENAS AQUI DENTRO DO MODAL */}
+                    <div className="campo-input"><label>Qtd Est.</label><input type="text" name="estoqueqtd" value={novoProduto.estoqueqtd} onChange={handleInputChange} /></div>
                     <div className="campo-input">
                       <label style={{ color: '#1E3A8A', fontWeight: 'bold' }}>Vender Por (Valor Livre)</label>
-                      <input 
-                        type="text" 
-                        name="venderPor" 
-                        value={novoProduto.venderPor || ''} 
-                        onChange={handleInputChange} 
-                        placeholder="Ex: 25,00" 
-                      />
+                      <input type="text" name="venderpor" value={novoProduto.venderpor || ''} onChange={handleInputChange} placeholder="Ex: 25,00" />
                     </div>
                   </div>
                 </div>
@@ -292,21 +380,23 @@ export default function Verao() {
                   </div>
 
                   <div className="subsecaoMaterial">
-                    {novoProduto.materiaisUsados.map((mat, index) => {
+                    {novoProduto.materiaisUsados && novoProduto.materiaisUsados.map((mat, index) => {
                       const temDimensaoCompleta = (parseFloat(String(mat.altura).replace(',', '.')) > 0 && parseFloat(String(mat.largura).replace(',', '.')) > 0);
-                      
+                      const valorExibidoGasto = mat.valorgasto !== undefined ? mat.valorgasto : mat.valor_gasto;
+                      const qtdExibidaLinha = mat.qtdusada !== undefined ? mat.qtdusada : mat.qtd_usada;
+
                       return (
                         <div key={index} className="material">
-                          <select value={mat.estoqueId} onChange={(e) => handleMaterialChange(index, 'estoqueId', e.target.value)}  required>
+                          <select value={mat.estoque_id || mat.estoqueId || ''} onChange={(e) => handleMaterialChange(index, 'estoque_id', e.target.value)} required>
                             <option value="">-- Selecione o Material --</option>
                             {estoque.map((item, i) => (
-                              <option key={i} value={item.id || item.idItem || item.codigo}>{item.descricao || item.nome}</option>
+                              <option key={i} value={item.id}>{item.descricao || item.material}</option>
                             ))}
                           </select>
-                          <input type="text" value={mat.largura} onChange={(e) => handleMaterialChange(index, 'largura', e.target.value)} placeholder="Larg (m)" />
-                          <input type="text" value={mat.altura} onChange={(e) => handleMaterialChange(index, 'altura', e.target.value)} placeholder="Alt (m)" />
-                          <input type="text" value={mat.qtdUsada} onChange={(e) => handleMaterialChange(index, 'qtdUsada', e.target.value)} placeholder="Qtd Usada" disabled={temDimensaoCompleta} />
-                          <div className="valor">R$ {parseFloat(mat.valorGasto || 0).toFixed(2).replace('.', ',')}</div>
+                          <input type="text" value={mat.largura || ''} onChange={(e) => handleMaterialChange(index, 'largura', e.target.value)} placeholder="Larg (m)" />
+                          <input type="text" value={mat.altura || ''} onChange={(e) => handleMaterialChange(index, 'altura', e.target.value)} placeholder="Alt (m)" />
+                          <input type="text" value={qtdExibidaLinha || ''} onChange={(e) => handleMaterialChange(index, 'qtdusada', e.target.value)} placeholder="Qtd Usada" disabled={temDimensaoCompleta} />
+                          <div className="valor">R$ {parseFloat(valorExibidoGasto || 0).toFixed(2).replace('.', ',')}</div>
                           <button type="button" onClick={() => handleRemoverMaterialLinha(index)} style={{ background: 'none', border: 'none', color: '#EF4444' }}><Trash2 size={15} /></button>
                         </div>
                       );
@@ -319,7 +409,6 @@ export default function Verao() {
                     <div className="calculosvalorbingo"><span>Venda Bingo:</span><strong>R$ {bingoModal.toFixed(2).replace('.', ',')}</strong></div>
                   </div>
                 </div>
-
               </div>
               <div className="modal-footer">
                 <button type="button" className="btn-cancelar" onClick={() => setIsModalAberto(false)}>Cancelar</button>

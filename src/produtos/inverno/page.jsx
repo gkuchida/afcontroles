@@ -1,31 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import { Plus, Pencil, Snowflake, X, ChevronDown, ChevronUp, Trash2 } from 'lucide-react';
+import { supabase } from '../../supabaseCliente'; 
 import './inverno.css';
+
+export const dynamic = 'force-dynamic';
 
 export default function Inverno() {
   const [isModalAberto, setIsModalAberto] = useState(false);
   const [produtoEditando, setProdutoEditando] = useState(null);
   const [itensExpandidos, setItensExpandidos] = useState({});
-  
-  const [produtosInverno, setProdutosInverno] = useState(() => {
-    const salvo = localStorage.getItem('produtos_inverno_json');
-    return salvo ? JSON.parse(salvo) : [];
-  });
-
+  const [produtosInverno, setProdutosInverno] = useState([]);
   const [estoque, setEstoque] = useState([]);
 
-  useEffect(() => {
-    const salvoEstoque = localStorage.getItem('meu_estoque_json');
-    if (salvoEstoque) {
-      setEstoque(JSON.parse(salvoEstoque));
-    }
-  }, [isModalAberto]);
-
-  useEffect(() => {
-    localStorage.setItem('produtos_inverno_json', JSON.stringify(produtosInverno));
-  }, [produtosInverno]);
-  
-  // Estado inicial padrão com o campo venderPor pronto
+  // Estado inicial padrão do formulário
   const [novoProduto, setNovoProduto] = useState({
     itemCodigo: '', 
     modelo: '', 
@@ -35,9 +22,83 @@ export default function Inverno() {
     pescoco: '', 
     torax: '', 
     comprimento: '', 
-    venderPor: '', // Campo que será preenchido no modal
+    venderPor: '', 
     materiaisUsados: []
   });
+
+  // --- BUSCAR DADOS DO SUPABASE ---
+  const buscarDadosSupabase = async () => {
+    try {
+      const { data: invernoData, error: invError } = await supabase
+        .from('inverno')
+        .select(`
+          *,
+          materiaisUsados:inverno_materiais(*)
+        `)
+        .order('id', { ascending: true });
+
+      if (invError) throw invError;
+
+      const dadosFormatados = (invernoData || []).map(item => ({
+        id: item.id,
+        itemCodigo: item.item_codigo,
+        modelo: item.modelo,
+        caracteristicas: item.caracteristicas,
+        tamanho: item.tamanho,
+        pescoco: item.pescoco,
+        torax: item.torax,
+        comprimento: item.comprimento,
+        estoqueQtd: item.estoque_qtd,
+        venderPor: item.vender_por,
+        materiaisUsados: (item.materiaisUsados || []).map(m => ({
+          id: m.id,
+          estoqueId: m.estoque_id,
+          nome: m.nome,
+          largura: m.largura,
+          altura: m.altura,
+          qtdUsada: m.qtd_usada,
+          valorGasto: m.valor_gasto
+        }))
+      }));
+
+      setProdutosInverno(dadosFormatados);
+    } catch (error) {
+      console.error("Erro ao carregar dados de inverno:", error);
+    }
+  };
+
+  const buscarEstoque = async () => {
+    try {
+      const { data, error } = await supabase.from('estoque').select('*');
+      if (error) throw error;
+      setEstoque(data || []);
+    } catch (error) {
+      console.error("Erro ao carregar estoque:", error);
+    }
+  };
+
+  useEffect(() => {
+    buscarDadosSupabase();
+    buscarEstoque();
+
+    // Cria uma conexão direta com o banco
+    const canalInverno = supabase
+      .channel('atualizacoes-inverno')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'inverno' }, () => {
+        buscarDadosSupabase(); // Recarrega os dados na tela no mesmo segundo
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(canalInverno);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (isModalAberto) {
+      buscarEstoque();
+    }
+  }, [isModalAberto]);
 
   // --- FUNÇÕES DE CÁLCULO ---
   const calcularCustoTotal = (materiais) => {
@@ -97,7 +158,7 @@ export default function Inverno() {
       }
 
       const itemEstoque = estoque.find(e => String(e.id) === String(itemAlterado.estoqueId));
-      const precoM2 = itemEstoque ? parseFloat(String(itemEstoque.valorUnitario || itemEstoque.preco).replace(',', '.')) || 0 : 0;
+      const precoM2 = itemEstoque ? parseFloat(String(itemEstoque.valorm || itemEstoque.valorUnitario || itemEstoque.preco).replace(',', '.')) || 0 : 0;
       const qtdFinal = parseFloat(String(itemAlterado.qtdUsada).replace(',', '.')) || 0;
       
       itemAlterado.valorGasto = (qtdFinal * precoM2).toFixed(2);
@@ -116,7 +177,7 @@ export default function Inverno() {
   const handleAbrirCadastro = () => {
     let proximoNumero = 1;
     if (produtosInverno.length > 0) {
-      const numerosAtuais = produtosInverno.map(p => parseInt(p.itemCodigo.replace('I', ''), 10) || 0);
+      const numerosAtuais = produtosInverno.map(p => parseInt(String(p.itemCodigo).replace('I', ''), 10) || 0);
       proximoNumero = Math.max(...numerosAtuais) + 1;
     }
     setNovoProduto({
@@ -126,22 +187,81 @@ export default function Inverno() {
     setIsModalAberto(true);
   };
 
-  const handleSalvarItem = (e) => {
+  // --- GRAVAR / ATUALIZAR NO SUPABASE ---
+  const handleSalvarItem = async (e) => {
     e.preventDefault();
-    if (produtoEditando) {
-      setProdutosInverno(produtosInverno.map(p => p.id === produtoEditando.id ? novoProduto : p));
-    } else {
-      setProdutosInverno([...produtosInverno, { ...novoProduto, id: Date.now() }]);
+    try {
+      let invernoIdFinal = null;
+
+      const payloadTabelaPai = {
+        item_codigo: novoProduto.itemCodigo,
+        modelo: novoProduto.modelo,
+        caracteristicas: novoProduto.caracteristicas,
+        tamanho: novoProduto.tamanho,
+        pescoco: novoProduto.pescoco,
+        torax: novoProduto.torax,
+        comprimento: novoProduto.comprimento,
+        estoque_qtd: novoProduto.estoqueQtd,
+        vender_por: novoProduto.venderPor
+      };
+
+      if (produtoEditando) {
+        invernoIdFinal = produtoEditando.id;
+        const { error: errorUpdate } = await supabase
+          .from('inverno')
+          .update(payloadTabelaPai)
+          .eq('id', invernoIdFinal);
+
+        if (errorUpdate) throw errorUpdate;
+
+        const { error: errorDeleteOld } = await supabase
+          .from('inverno_materiais')
+          .delete()
+          .eq('inverno_id', invernoIdFinal);
+
+        if (errorDeleteOld) throw errorDeleteOld;
+      } else {
+        const { data: insertData, error: errorInsert } = await supabase
+          .from('inverno')
+          .insert([payloadTabelaPai])
+          .select();
+
+        if (errorInsert) throw errorInsert;
+        invernoIdFinal = insertData[0].id;
+      }
+
+      if (novoProduto.materiaisUsados && novoProduto.materiaisUsados.length > 0) {
+        const payloadMateriais = novoProduto.materiaisUsados.map(mat => ({
+          inverno_id: invernoIdFinal,
+          estoque_id: String(mat.estoqueId),
+          nome: mat.nome,
+          largura: String(mat.largura),
+          altura: String(mat.altura),
+          qtd_usada: String(mat.qtdUsada),
+          valor_gasto: String(mat.valorGasto)
+        }));
+
+        const { error: errorFilho } = await supabase
+          .from('inverno_materiais')
+          .insert(payloadMateriais);
+
+        if (errorFilho) throw errorFilho;
+      }
+
+      setIsModalAberto(false);
+      setProdutoEditando(null);
+      buscarDadosSupabase();
+
+    } catch (error) {
+      console.error("Erro ao salvar no banco:", error);
+      alert("Erro ao salvar dados de inverno: " + (error.message || error.details));
     }
-    setIsModalAberto(false);
-    setProdutoEditando(null);
   };
 
   const custoModal = calcularCustoTotal(novoProduto.materiaisUsados);
   const particularModal = calcularVendaParticular(custoModal);
   const bingoModal = calcularVendaBingo(particularModal);
 
-  // Formata o valor digitado para exibir bonito "R$ X,XX" na tabela
   const formatarMoedaExibicao = (valor) => {
     if (!valor) return 'R$ 0,00';
     const numeroLimpo = parseFloat(String(valor).replace('R$', '').replace(',', '.').trim());
@@ -174,7 +294,7 @@ export default function Inverno() {
             <div>Custo</div>
             <div>Particular</div>
             <div>Bingo</div>
-            <div style={{ fontWeight: '600' }}>Vender Por</div> {/* Coluna de Leitura */}
+            <div style={{ fontWeight: '600' }}>Vender Por</div>
             <div>Qtd</div>
             <div style={{ textAlign: 'center' }}>Ações</div>
           </div>
@@ -206,7 +326,6 @@ export default function Inverno() {
                   <div className="particular">R$ {partNum.toFixed(2).replace('.', ',')}</div>
                   <div className="bingo">R$ {bingoNum.toFixed(2).replace('.', ',')}</div>
                   
-                  {/* TEXTO FIXO NA TABELA (NÃO EDITÁVEL AQUI) */}
                   <div style={{ fontWeight: '600', color: '#1E3A8A' }}>
                     {formatarMoedaExibicao(prod.venderPor)}
                   </div>
@@ -269,7 +388,6 @@ export default function Inverno() {
                   <div className="linha-dupla">
                     <div className="campo-input"><label>Qtd Est.</label><input type="text" name="estoqueQtd" value={novoProduto.estoqueQtd} onChange={handleInputChange} /></div>
                     
-                    {/* EDITÁVEL APENAS AQUI DENTRO DO MODAL */}
                     <div className="campo-input">
                       <label style={{ color: '#1E3A8A', fontWeight: 'bold' }}>Vender Por (Valor Livre)</label>
                       <input 
@@ -297,10 +415,10 @@ export default function Inverno() {
                       
                       return (
                         <div key={index} className="material">
-                          <select value={mat.estoqueId} onChange={(e) => handleMaterialChange(index, 'estoqueId', e.target.value)}  required>
+                          <select value={mat.estoqueId} onChange={(e) => handleMaterialChange(index, 'estoqueId', e.target.value)} required>
                             <option value="">-- Selecione o Material --</option>
                             {estoque.map((item, i) => (
-                              <option key={i} value={item.id || item.idItem || item.codigo}>{item.descricao || item.nome}</option>
+                              <option key={i} value={item.id || item.idItem || item.codigo}>{item.descricao || item.nome || item.material}</option>
                             ))}
                           </select>
                           <input type="text" value={mat.largura} onChange={(e) => handleMaterialChange(index, 'largura', e.target.value)} placeholder="Larg (m)" />
