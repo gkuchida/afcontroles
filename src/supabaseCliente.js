@@ -1,7 +1,16 @@
-import { createClient } from '@supabase/supabase-js';
+import { createClient } from '@supabase/supabase-js'
 
-// Sintaxe correta e obrigatória para projetos com Vite
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+// Varre todas as possibilidades de variáveis para nunca dar undefined
+const supabaseUrl = 
+  import.meta.env?.VITE_SUPABASE_URL || 
+  process.env?.NEXT_PUBLIC_SUPABASE_URL || 
+  process.env?.VITE_SUPABASE_URL ||
+  "https://xdybbsfyggzzjkfcpcoe.supabase.co"; // URL fallback garantida
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+const supabaseAnonKey = 
+  import.meta.env?.VITE_SUPABASE_ANON_KEY || 
+  process.env?.NEXT_PUBLIC_SUPABASE_ANON_KEY || 
+  process.env?.VITE_SUPABASE_ANON_KEY ||
+  "sb_publishable_1hCxBjfenQ8KUML5m-QpLg_Ok2tNX8Y"; // Key fallback garantida
+
+export const supabase = createClient(supabaseUrl, supabaseAnonKey)
