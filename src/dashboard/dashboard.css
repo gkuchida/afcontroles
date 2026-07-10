@@ -92,3 +92,85 @@
     font-weight: 700;
     color: #0f172a;
   }
+
+  /* Card de largura total */
+.dashboard-full-card {
+  background: white;
+  border-radius: 12px;
+  padding: 20px;
+  margin-top: 24px;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.full-card-header {
+  display: flex;
+  align-items: center;
+  border-bottom: 1px solid #f3f4f6;
+  padding-bottom: 15px;
+  margin-bottom: 15px;
+}
+
+/* Tabela de Estoque */
+.estoque-table-wrapper {
+  overflow-x: auto;
+}
+
+.estoque-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+  font-size: 0.95rem;
+}
+
+.estoque-table th {
+  background-color: #f8fafc;
+  color: #475569;
+  padding: 12px 16px;
+  font-weight: 600;
+  border-bottom: 2px solid #e2e8f0;
+}
+
+.estoque-table td {
+  padding: 14px 16px;
+  border-bottom: 1px solid #f1f5f9;
+  color: #334155;
+}
+
+.estoque-table tr:hover {
+  background-color: #f8fafc;
+}
+
+/* Helpers Visuais */
+.font-bold {
+  font-weight: 600;
+}
+
+.text-muted {
+  color: #64748b;
+  font-size: 0.9rem;
+}
+
+.badge-tamanho {
+  background: #f1f5f9;
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-weight: 700;
+  color: #475569;
+}
+
+.estoque-qtd {
+  color: #16a34a;
+}
+
+.valor-venda {
+  font-weight: 600;
+  color: #0f172a;
+}
+
+.loading-text, .empty-text {
+  text-align: center;
+  color: #666;
+  padding: 20px;
+}

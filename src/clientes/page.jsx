@@ -1,19 +1,36 @@
 import React, { useState, useEffect } from 'react';
+import { supabase } from '../supabaseCliente';
 import './clientes.css';
 
 export default function Clientes() {
   const [filtroCliente, setFiltroCliente] = useState('');
   const [historicoVendas, setHistoricoVendas] = useState([]);
+  const [carregando, setCarregando] = useState(true);
 
-  // 1. Carrega o histórico de vendas gerado na sua página de Vendas
+  // 1. Carrega o histórico de vendas diretamente do Supabase
   useEffect(() => {
-    const vendasSalvas = localStorage.getItem('minhas_vendas_json');
-    if (vendasSalvas) {
-      setHistoricoVendas(JSON.parse(vendasSalvas));
-    }
+    fetchHistoricoVendas();
   }, []);
 
-  // 2. FUNÇÃO QUE BUSCA AS MEDIDAS NOS ARQUIVOS DE ESTOQUE BASEADO NO NOME DO PRODUTO
+  async function fetchHistoricoVendas() {
+    try {
+      setCarregando(true);
+      const { data, error } = await supabase
+        .from('vendas')
+        .select('*')
+        .order('data', { ascending: false }); // Lista as vendas mais recentes no topo
+
+      if (error) throw error;
+      if (data) setHistoricoVendas(data);
+    } catch (error) {
+      console.error('Erro ao buscar histórico de vendas:', error.message);
+      alert('Não foi possível carregar o histórico de vendas do banco de dados.');
+    } finally {
+      setCarregando(false);
+    }
+  }
+
+  // 2. FUNÇÃO QUE BUSCA AS MEDIDAS NOS ARQUIVOS DE ESTOQUE (Mantido original via localStorage)
   const buscarMedidasDoProduto = (nomeProduto) => {
     if (!nomeProduto) return { pescoco: '---', torax: '---', comprimento: '---' };
 
@@ -31,7 +48,6 @@ export default function Clientes() {
 
       const produtos = JSON.parse(dadosBrutos);
       
-      // Procura o produto pelo nome correspondente
       const encontrado = produtos.find(
         p => (p.modelo?.toLowerCase() === nomeProduto.toLowerCase()) || 
              (p.produto?.toLowerCase() === nomeProduto.toLowerCase())
@@ -46,7 +62,6 @@ export default function Clientes() {
       }
     }
 
-    // Se não achar em nenhuma lista ou for item de casa (Artesanato sem medidas)
     return { pescoco: '---', torax: '---', comprimento: '---' };
   };
 
@@ -88,7 +103,6 @@ export default function Clientes() {
             <div>Qtd</div>
             <div>Produto</div>
             <div>Tam.</div>
-            {/* Novas colunas de Medidas adicionadas dinamicamente na tabela */}
             <div>Pescoço</div>
             <div>Tórax</div>
             <div>Compr.</div>
@@ -98,33 +112,47 @@ export default function Clientes() {
             <div>Observação</div>
           </div>
 
-          {vendasFiltradas.length === 0 ? (
+          {carregando ? (
+            <div className="clientes-msg-vazia">Carregando dados do servidor...</div>
+          ) : vendasFiltradas.length === 0 ? (
             <div className="clientes-msg-vazia">
               {filtroCliente ? 'Nenhum registro encontrado para este filtro.' : 'Nenhuma venda cadastrada no sistema.'}
             </div>
           ) : (
             vendasFiltradas.map((venda) => {
-              // Executa a busca automática de medidas usando o nome do produto atual da linha
-              const medidas = buscarMedidasDoProduto(venda.produto);
+              // Mapeamento seguro das chaves vindas do Supabase (snake_case)
+              const vData = venda.data;
+              const vCliente = venda.cliente;
+              const vPet = venda.pet;
+              const vQuantidade = venda.quantidade;
+              const vProduto = `${venda.carregando} ${venda.produto}`
+              const vTamanho = venda.tamanho;
+              const vValorUnitario = venda.valor_unitario ?? venda.valorUnitario;
+              const vCusto = venda.custo;
+              const vFormaPagamento = venda.forma_pagamento ?? venda.formaPagamento;
+              const vObservacao = venda.observacao;
+
+              // Executa a busca automática de medidas locais usando o nome do produto
+              const medidas = buscarMedidasDoProduto(vProduto);
 
               return (
                 <div key={venda.id} className="clientes-modulo-linha-body">
-                  <div>{venda.data ? venda.data.split('-').reverse().join('/') : '-'}</div>
-                  <div style={{ fontWeight: '600' }}>{venda.cliente}</div>
-                  <div>{venda.pet || '-'}</div>
-                  <div>{venda.quantidade || 1}</div>
-                  <div>{venda.produto}</div>
-                  <div><span className="clientes-modulo-badge">{venda.tamanho || 'U'}</span></div>
+                  <div>{vData ? vData.split('-').reverse().join('/') : '-'}</div>
+                  <div style={{ fontWeight: '600' }}>{vCliente}</div>
+                  <div>{vPet || '-'}</div>
+                  <div>{vQuantidade || 1}</div>
+                  <div>{vProduto}</div>
+                  <div><span className="clientes-modulo-badge">{vTamanho || 'U'}</span></div>
                   
-                  {/* Renderização das medidas encontradas de forma limpa */}
+                  {/* Medidas locais */}
                   <div style={{ color: '#163357', fontWeight: '600' }}>{medidas.pescoco}</div>
                   <div style={{ color: '#163357', fontWeight: '600' }}>{medidas.torax}</div>
                   <div style={{ color: '#163357', fontWeight: '600' }}>{medidas.comprimento}</div>
                   
-                  <div>R$ {parseFloat(venda.valorUnitario || 0).toFixed(2).replace('.', ',')}</div>
-                  <div>R$ {parseFloat(venda.custo || 0).toFixed(2).replace('.', ',')}</div>
-                  <div>{venda.formaPagamento || 'Dinheiro'}</div>
-                  <div style={{ color: '#666666', fontStyle: 'italic' }}>{venda.observacao || ''}</div>
+                  <div>R$ {parseFloat(vValorUnitario || 0).toFixed(2).replace('.', ',')}</div>
+                  <div>R$ {parseFloat(vCusto || 0).toFixed(2).replace('.', ',')}</div>
+                  <div>{vFormaPagamento || 'Dinheiro'}</div>
+                  <div style={{ color: '#666666', fontStyle: 'italic' }}>{vObservacao || ''}</div>
                 </div>
               );
             })

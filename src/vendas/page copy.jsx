@@ -1,13 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { ShoppingBag, Plus } from 'lucide-react';
+import { supabase } from '../supabaseCliente';
 import './vendas.css'; 
 
 export default function Vendas() {
-  const [vendas, setVendas] = useState(() => {
-    const salvo = localStorage.getItem('minhas_vendas_json');
-    return salvo ? JSON.parse(salvo) : [];
-  });
-
+  const [vendas, setVendas] = useState([]);
   const [produtosDisponiveis, setProdutosDisponiveis] = useState([]);
 
   const [novaVenda, setNovaVenda] = useState({
@@ -23,11 +20,31 @@ export default function Vendas() {
     observacao: ''
   });
 
-  // Carrega e filtra os produtos mapeando a estrutura real do seu JSON
+  // 1. Carrega as vendas vindas do Supabase ao montar o componente
+  useEffect(() => {
+    fetchVendas();
+  }, []);
+
+  async function fetchVendas() {
+    try {
+      const { data, error } = await supabase
+        .from('vendas')
+        .select('*')
+        .order('id', { ascending: false }); // Vendas mais recentes primeiro
+
+      if (error) throw error;
+      if (data) setVendas(data);
+    } catch (error) {
+      console.error('Erro ao buscar vendas:', error.message);
+      alert('Erro ao carregar dados do banco de dados.');
+    }
+  }
+
+  // Carrega os produtos varrendo todos os JSONs do localStorage (Mantido original)
   useEffect(() => {
     const listasDeChaves = [
       'produtos_inverno_json',
-      'produtos_meiaestacao_json', // Corrigido: tudo junto conforme o console
+      'produtos_meiaestacao_json',
       'produtos_verao_json',
       'produtos_artesanato_json',
       'produtos_encomendas_json'
@@ -36,26 +53,30 @@ export default function Vendas() {
     let todosProdutosComEstoque = [];
 
     listasDeChaves.forEach(chave => {
-      const produtosDaLista = JSON.parse(localStorage.getItem(chave) || '[]');
+      const dadosBrutos = localStorage.getItem(chave);
+      if (!dadosBrutos) return;
+
+      const produtosDaLista = JSON.parse(dadosBrutos);
       
       produtosDaLista.forEach(p => {
-        // Lendo exatamente o campo 'estoqueQtd' retornado no diagnóstico
-        const numeroEstoque = parseInt(p.estoqueQtd) || 0;
-
-        if (numeroEstoque > 0) {
+        const estoqueBruto = p.estoqueQtd || p.Qtd || p.qtd || p.quantidade;
+        
+        if (estoqueBruto && estoqueBruto !== "0" && estoqueBruto !== 0) {
           todosProdutosComEstoque.push({
+            itemCodigo: p.itemCodigo || '', 
             nome: p.modelo || p.produto || 'Sem nome',
-            tamanho: p.tamanho || 'U', // Corrigido: tudo minúsculo
-            caracteristicas: p.caracteristicas || '', // Corrigido: sem acento
-            valorVenda: p.particular || p.Particular || '' 
+            tamanho: p.tamanho || p.Tam || p.tam || 'U',
+            caracteristicas: p.caracteristicas || p.Características || '',            
+            valorVenda: p.venderPor || p.particular || p.Particular || '' 
           });
         }
       });
     });
 
     setProdutosDisponiveis(todosProdutosComEstoque);
-  }, [vendas]); 
+  }, []); 
 
+  // Busca e calcula o custo (Mantido original)
   const buscarCustoDoProduto = (nomeProduto) => {
     if (!nomeProduto) return 0;
     const listasDeProdutos = [
@@ -74,12 +95,9 @@ export default function Vendas() {
       );
 
       if (produtoEncontrado) {
-        // Soma automaticamente os materiaisUsados se existirem (exatamente como no seu JSON)
         if (produtoEncontrado.materiaisUsados && produtoEncontrado.materiaisUsados.length > 0) {
           return produtoEncontrado.materiaisUsados.reduce((acc, m) => acc + (parseFloat(m.valorGasto) || 0), 0);
         }
-        
-        // Caso não tenha materiais detalhados, tenta buscar um custo fixo direto
         const custoBruto = produtoEncontrado.custo || produtoEncontrado.Custo || "0";
         const custoLimpo = String(custoBruto).replace('R$', '').replace('.', '').replace(',', '.').trim();
         return parseFloat(custoLimpo) || 0;
@@ -88,26 +106,26 @@ export default function Vendas() {
     return 0;
   };
 
-  useEffect(() => {
-    localStorage.setItem('minhas_vendas_json', JSON.stringify(vendas));
-  }, [vendas]);
-
   const handleProdutoChange = (e) => {
-    const nomeSelecionado = e.target.value;
-    const prodInfo = produtosDisponiveis.find(p => p.nome === nomeSelecionado);
+    const codigoSelecionado = e.target.value;
+    const prodInfo = produtosDisponiveis.find(p => p.itemCodigo === codigoSelecionado);
 
     if (prodInfo) {
-      const valorUnitarioLimpo = String(prodInfo.valorVenda).replace('R$', '').replace('.', '').replace(',', '.').trim();
+      const valorUnitarioLimpo = String(prodInfo.valorVenda)
+        .replace('R$', '')
+        .replace('.', '')
+        .replace(',', '.')
+        .trim();
 
       setNovaVenda({
         ...novaVenda,
-        produto: nomeSelecionado,
+        produto: prodInfo.nome, 
         tamanho: prodInfo.tamanho,
         caracteristicas: prodInfo.caracteristicas,
-        valorUnitario: valorUnitarioLimpo || ''
+        valorUnitario: valorUnitarioLimpo || '' 
       });
     } else {
-      setNovaVenda({ ...novaVenda, produto: nomeSelecionado });
+      setNovaVenda({ ...novaVenda, produto: '', valorUnitario: '' });
     }
   };
 
@@ -116,7 +134,8 @@ export default function Vendas() {
     setNovaVenda({ ...novaVenda, [name]: value });
   };
 
-  const handleSalvarVenda = (e) => {
+  // 2. Salva a nova venda diretamente no Supabase
+  const handleSalvarVenda = async (e) => {
     e.preventDefault();
     if (!novaVenda.produto) {
       alert("Por favor, selecione um produto válido em estoque.");
@@ -131,31 +150,57 @@ export default function Vendas() {
     const valorFinalItem = vUnitario * qtd;
     const lucroItem = valorFinalItem - custoTotalItem;
 
-    const itemVenda = {
-      ...novaVenda,
-      id: Date.now(),
+    // Objeto formatado de acordo com as colunas do seu banco
+    const novaVendaDb = {
+      data: novaVenda.data,
+      cliente: novaVenda.cliente,
+      pet: novaVenda.pet,
+      quantidade: qtd,
+      produto: novaVenda.produto,
+      tamanho: novaVenda.tamanho,
+      caracteristicas: novaVenda.caracteristicas,
+      valor_unitario: vUnitario,
+      valor_final: valorFinalItem,
       custo: custoTotalItem,
-      valorFinal: valorFinalItem,
-      lucro: lucroItem
+      lucro: lucroItem,
+      forma_pagamento: novaVenda.formaPagamento,
+      observacao: novaVenda.observacao
     };
 
-    setVendas([...vendas, itemVenda]);
-    
-    setNovaVenda({
-      ...novaVenda,
-      pet: '',
-      quantidade: 1,
-      produto: '',
-      tamanho: 'U',
-      caracteristicas: '',
-      valorUnitario: ''
-    });
+    try {
+      const { data, error } = await supabase
+        .from('vendas')
+        .insert([novaVendaDb])
+        .select(); // Retorna o item inserido com o ID real gerado pelo banco
+
+      if (error) throw error;
+
+      if (data) {
+        // Atualiza o estado local adicionando o item salvo no topo/fim
+        setVendas([data[0], ...vendas]);
+        
+        // Reseta o formulário
+        setNovaVenda({
+          ...novaVenda,
+          pet: '',
+          quantidade: 1,
+          produto: '',
+          tamanho: 'U',
+          caracteristicas: '',
+          valorUnitario: '',
+          observacao: ''
+        });
+      }
+    } catch (error) {
+      console.error('Erro ao salvar venda:', error.message);
+      alert('Não foi possível salvar a venda.');
+    }
   };
 
   const calcularSomaAgrupada = (cliente, data) => {
     return vendas
       .filter(v => v.cliente.toLowerCase() === cliente.toLowerCase() && v.data === data)
-      .reduce((acc, v) => acc + v.valorFinal, 0);
+      .reduce((acc, v) => acc + (parseFloat(v.valor_final) || v.valorFinal || 0), 0);
   };
 
   return (
@@ -175,11 +220,11 @@ export default function Vendas() {
           
           <div className="vendas-modulo-campo">
             <label>Produto em Estoque</label>
-            <select name="produto" value={novaVenda.produto} onChange={handleProdutoChange} required>
+            <select name="produto" onChange={handleProdutoChange} value={produtosDisponiveis.find(p => p.nome === novaVenda.produto)?.itemCodigo || ""} required>
               <option value="">-- Selecione o Produto --</option>
               {produtosDisponiveis.map((prod, idx) => (
-                <option key={idx} value={prod.nome}>
-                  {prod.itemCodigo}-{prod.nome} ({prod.tamanho})
+                <option key={idx} value={prod.itemCodigo}>
+                  {prod.itemCodigo} - {prod.nome} {prod.caracteristicas} ({prod.tamanho})
                 </option>
               ))}
             </select>
@@ -187,13 +232,36 @@ export default function Vendas() {
 
           <div className="vendas-modulo-campo" style={{ width: '70px' }}><label>Qtd</label><input type="number" name="quantidade" value={novaVenda.quantidade} onChange={handleInputChange} min="1" required /></div>
           <div className="vendas-modulo-campo" style={{ width: '70px' }}><label>Tam.</label><input type="text" name="tamanho" value={novaVenda.tamanho} onChange={handleInputChange} /></div>
-          <div className="vendas-modulo-campo"><label>Valor Unit.</label><input type="number" step="0.01" name="valorUnitario" value={novaVenda.valorUnitario} onChange={handleInputChange} required placeholder="25,00" /></div>
+          
+          <div className="vendas-modulo-campo">
+            <label>Valor Unit.</label>
+            <input 
+              type="number" 
+              step="0.01" 
+              name="valorUnitario" 
+              value={novaVenda.valorUnitario} 
+              onChange={handleInputChange} 
+              required 
+              placeholder="0,00" 
+            />
+          </div>
+
           <div className="vendas-modulo-campo"><label>Forma Pagamento</label>
             <select name="formaPagamento" value={novaVenda.formaPagamento} onChange={handleInputChange}>
-              <option value="Dinheiro">Dinheiro</option>
-              <option value="Cartão">Cartão</option>
+              <option value="Dinheiro">Dinheiro</option>              
               <option value="Pix">Pix</option>
             </select>
+          </div>
+
+          <div className="vendas-modulo-campo">
+            <label>Observação</label>
+            <input
+                type="text" 
+                name="observacao"                                
+                placeholder="Anote" 
+                value={novaVenda.observacao}
+                onChange={handleInputChange}
+            />
           </div>
         </div>
         <button type="submit" className="vendas-modulo-btn-submeter"><Plus size={16} /> Lançar Linha</button>
@@ -211,28 +279,44 @@ export default function Vendas() {
             <div>Valor Unit.</div>
             <div>Valor Final (Linha)</div>
             <div>Total do Dia Cliente</div>
-            <div style={{ color: '#DC2626' }}>Custo</div>
-            <div style={{ color: '#2563EB' }}>Lucro</div>
+            <div>Custo</div>
+            <div>Lucro</div>
             <div>Pagamento</div>
+            <div>Observação</div>
           </div>
 
           {vendas.map((venda) => {
-            const totalAgrupadoCliente = calcularSomaAgrupada(venda.cliente, venda.data);
+            // Adaptando o mapeamento para aceitar snake_case (banco) ou camelCase (antigo)
+            const vData = venda.data;
+            const vCliente = venda.cliente;
+            const vPet = venda.pet;
+            const vQuantidade = venda.quantidade;
+            const vProduto = venda.produto;
+            const vTamanho = venda.tamanho;
+            const vValorUnitario = venda.valor_unitario ?? venda.valorUnitario;
+            const vValorFinal = venda.valor_final ?? venda.valorFinal;
+            const vCusto = venda.custo;
+            const vLucro = venda.lucro;
+            const vFormaPagamento = venda.forma_pagamento ?? venda.formaPagamento;
+            const vObservacao = venda.observacao;
+
+            const totalAgrupadoCliente = calcularSomaAgrupada(vCliente, vData);
 
             return (
               <div key={venda.id} className="vendas-modulo-linha-body">
-                <div>{venda.data.split('-').reverse().join('/')}</div>
-                <div style={{ fontWeight: 'bold' }}>{venda.cliente}</div>
-                <div>{venda.pet || '-'}</div>
-                <div>{venda.quantidade}</div>
-                <div>{venda.produto}</div>
-                <div><span className="vendas-modulo-badge">{venda.tamanho}</span></div>
-                <div>R$ {parseFloat(venda.valorUnitario).toFixed(2).replace('.', ',')}</div>
-                <div>R$ {venda.valorFinal.toFixed(2).replace('.', ',')}</div>
+                <div>{vData ? vData.split('-').reverse().join('/') : '-'}</div>
+                <div style={{ fontWeight: '600' }}>{vCliente}</div>
+                <div>{vPet || '-'}</div>
+                <div>{vQuantidade}</div>
+                <div>{vProduto}</div>
+                <div><span className="vendas-modulo-badge">{vTamanho}</span></div>
+                <div>R$ {parseFloat(vValorUnitario || 0).toFixed(2).replace('.', ',')}</div>
+                <div>R$ {parseFloat(vValorFinal || 0).toFixed(2).replace('.', ',')}</div>
                 <div style={{ color: '#10B981', fontWeight: 'bold' }}>R$ {totalAgrupadoCliente.toFixed(2).replace('.', ',')}</div>
-                <div style={{ color: '#DC2626' }}>R$ {venda.custo.toFixed(2).replace('.', ',')}</div>
-                <div style={{ color: '#2563EB', fontWeight: '600' }}>R$ {venda.lucro.toFixed(2).replace('.', ',')}</div>
-                <div>{venda.formaPagamento}</div>
+                <div style={{ color: '#DC2626' }}>R$ {parseFloat(vCusto || 0).toFixed(2).replace('.', ',')}</div>
+                <div style={{ color: '#2563EB', fontWeight: '600' }}>R$ {parseFloat(vLucro || 0).toFixed(2).replace('.', ',')}</div>
+                <div>{vFormaPagamento}</div>
+                <div>{vObservacao || '-'}</div>
               </div>
             );
           })}

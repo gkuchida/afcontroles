@@ -12,6 +12,7 @@ import Encomendas from './produtos/encomendas/page.jsx';
 import Vendas from './vendas/page.jsx';
 import Clientes from './clientes/page.jsx';
 import Fidelidade from './fidelidade/page.jsx';
+import Financeiro from './financeiro/page.jsx';
 
 function App() {
   // 1) O ESTADO REAL E CRU DO SEU ESTOQUE FICA AQUI AGORA:
@@ -76,7 +77,10 @@ function App() {
             <Route 
               path="/fidelidade" 
               element={<Fidelidade produtosEstoque={produtosEstoque} setProdutosEstoque={setProdutosEstoque} />} 
-            />         
+            />                     
+
+            {/* 11) Passa a MESMA lista real para a página de Financeiro ler no seu select */}
+            <Route path="/financeiro" element={<Financeiro />} />   
             </Routes>
 
         </main>

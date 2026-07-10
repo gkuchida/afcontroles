@@ -1,10 +1,8 @@
-import React, { useState, useMemo, useEffect } from 'react';
-import { supabase } from '../supabaseCliente';
+import React, { useState, useMemo } from 'react';
 import './fidelidade.css';
 
 export default function Fidelidade() {
   const [historicoGeral, setHistoricoGeral] = useState([]);
-  const [carregando, setCarregando] = useState(true);
 
   // Estados do formulário de entrada manual
   const [cliente, setCliente] = useState('');
@@ -13,29 +11,6 @@ export default function Fidelidade() {
 
   // Novo estado para a barra de pesquisa do histórico
   const [pesquisa, setPesquisa] = useState('');
-
-  // 1. Carregar dados usando o padrão fidelidade_materiais
-  const carregarHistorico = async () => {
-    try {
-      setCarregando(true);
-      const { data: dados, error } = await supabase
-        .from('fidelidade_materiais')
-        .select('*')
-        .order('data', { ascending: false })
-        .order('id', { ascending: false });
-
-      if (error) throw error;
-      setHistoricoGeral(dados || []);
-    } catch (error) {
-      console.error("Erro ao buscar histórico do Supabase:", error.message);
-    } finally {
-      setCarregando(false);
-    }
-  };
-
-  useEffect(() => {
-    carregarHistorico();
-  }, []);
 
   // Função auxiliar para ignorar acentos, espaços extras e maiúsculas/minúsculas
   const normalizarNome = (nome) => {
@@ -48,62 +23,35 @@ export default function Fidelidade() {
       .replace(/\s+/g, ' ');          // Remove espaços duplos internos
   };
 
-  // 2. Salvar uma nova compra no banco padronizado
-  const handleAdicionarCompra = async (e) => {
+  const handleAdicionarCompra = (e) => {
     e.preventDefault();
     if (!cliente || !valor) return;
 
     const novaCompra = {
+      id: Date.now(),
       tipo: 'COMPRA',
       data,
       cliente: cliente.trim(),
       valor: parseFloat(valor),
     };
 
-    try {
-      const { data: inserido, error } = await supabase
-        .from('fidelidade_materiais')
-        .insert([novaCompra])
-        .select();
-
-      if (error) throw error;
-
-      if (inserido) {
-        setHistoricoGeral([inserido[0], ...historicoGeral]);
-      }
-      
-      setCliente('');
-      setValor('');
-    } catch (error) {
-      alert("Erro ao salvar compra: " + error.message);
-    }
+    setHistoricoGeral([novaCompra, ...historicoGeral]);
+    setCliente('');
+    setValor('');
   };
 
-  // 3. Salvar uma retirada no banco padronizado
-  const handleRetirarBandana = async (nomeOriginal) => {
+  const handleRetirarBandana = (nomeOriginal) => {
     const dataAtual = new Date().toISOString().split('T')[0];
     
     const novaRetirada = {
+      id: Date.now(),
       tipo: 'RETIRADA',
       data: dataAtual,
       cliente: nomeOriginal.trim(),
       valor: 0
     };
 
-    try {
-      const { data: inserido, error } = await supabase
-        .from('fidelidade_materiais')
-        .insert([novaRetirada])
-        .select();
-
-      if (error) throw error;
-
-      if (inserido) {
-        setHistoricoGeral([inserido[0], ...historicoGeral]);
-      }
-    } catch (error) {
-      alert("Erro ao registrar entrega de brinde: " + error.message);
-    }
+    setHistoricoGeral([novaRetirada, ...historicoGeral]);
   };
 
   // Processa o histórico para gerar os saldos ativos dos clientes
@@ -122,7 +70,7 @@ export default function Fidelidade() {
       }
 
       if (item.tipo === 'COMPRA') {
-        resumo[chave].totalCompradoBruto += Number(item.valor);
+        resumo[chave].totalCompradoBruto += item.valor;
       } else if (item.tipo === 'RETIRADA') {
         resumo[chave].totalRetiradas += 1;
       }
@@ -146,7 +94,7 @@ export default function Fidelidade() {
     });
   }, [historicoGeral]);
 
-  // Filtra o histórico linha a linha com base na pesquisa
+  // Filtra o histórico linha a linha com base no que foi digitado na pesquisa
   const historicoFiltrado = useMemo(() => {
     const termoNormalizado = normalizarNome(pesquisa);
     
@@ -223,11 +171,7 @@ export default function Fidelidade() {
                 </tr>
               </thead>
               <tbody>
-                {carregando ? (
-                  <tr>
-                    <td colSpan="5" className="sem-dados">Buscando dados no Supabase...</td>
-                  </tr>
-                ) : resumoClientes.length === 0 ? (
+                {resumoClientes.length === 0 ? (
                   <tr>
                     <td colSpan="5" className="sem-dados">Nenhum cliente com compras registradas.</td>
                   </tr>
@@ -245,7 +189,7 @@ export default function Fidelidade() {
                       </td>
                       <td>
                         {item.bandanasDisponiveis > 0 ? (
-                          <span className="badge-premio">{item.bandanasDisponiveis} brinde(s) 🎁</span>
+                          <span className="badge-premio">{item.bandanasDisponiveis} bandana(s) 🎁</span>
                         ) : (
                           <span className="sem-premio">Nenhuma</span>
                         )}
@@ -274,6 +218,7 @@ export default function Fidelidade() {
         <div className="historico-header-acoes">
           <h2>Histórico de Movimentações (Linha a Linha)</h2>
           
+          {/* Campo de Busca Otimizado */}
           <div className="busca-wrapper">
             <input 
               type="text"
@@ -296,11 +241,7 @@ export default function Fidelidade() {
               </tr>
             </thead>
             <tbody>
-              {carregando ? (
-                <tr>
-                  <td colSpan="4" className="sem-dados">Carregando histórico...</td>
-                </tr>
-              ) : historicoFiltrado.length === 0 ? (
+              {historicoFiltrado.length === 0 ? (
                 <tr>
                   <td colSpan="4" className="sem-dados">
                     {pesquisa ? 'Nenhum resultado encontrado para esta busca.' : 'Nenhuma movimentação registrada.'}
@@ -309,7 +250,7 @@ export default function Fidelidade() {
               ) : (
                 historicoFiltrado.map(mov => (
                   <tr key={mov.id} className={mov.tipo === 'RETIRADA' ? 'linha-retirada' : ''}>
-                    <td>{mov.data ? mov.data.split('-').reverse().join('/') : ''}</td>
+                    <td>{mov.data.split('-').reverse().join('/')}</td>
                     <td>{mov.cliente}</td>
                     <td>
                       {mov.tipo === 'COMPRA' ? (
@@ -320,9 +261,9 @@ export default function Fidelidade() {
                     </td>
                     <td>
                       {mov.tipo === 'COMPRA' ? (
-                        `R$ ${Number(mov.valor).toFixed(2)}`
+                        `R$ ${mov.valor.toFixed(2)}`
                       ) : (
-                        <strong style={{ color: '#16a34a' }}>Brinde Entregue</strong>
+                        <strong style={{ color: '#16a34a' }}>Bandana Entregue</strong>
                       )}
                     </td>
                   </tr>

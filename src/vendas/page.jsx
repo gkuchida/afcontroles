@@ -1,13 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { ShoppingBag, Plus } from 'lucide-react';
+import { supabase } from '../supabaseCliente';
 import './vendas.css'; 
 
 export default function Vendas() {
-  const [vendas, setVendas] = useState(() => {
-    const salvo = localStorage.getItem('minhas_vendas_json');
-    return salvo ? JSON.parse(salvo) : [];
-  });
-
+  const [vendas, setVendas] = useState([]);
   const [produtosDisponiveis, setProdutosDisponiveis] = useState([]);
 
   const [novaVenda, setNovaVenda] = useState({
@@ -23,85 +20,95 @@ export default function Vendas() {
     observacao: ''
   });
 
-  // Carrega os produtos varrendo todos os JSONs do localStorage
+  // 1. Carrega as vendas vindas do Supabase ao montar o componente
   useEffect(() => {
-    const listasDeChaves = [
-      'produtos_inverno_json',
-      'produtos_meiaestacao_json',
-      'produtos_verao_json',
-      'produtos_artesanato_json',
-      'produtos_encomendas_json'
-    ];
+    fetchVendas();
+  }, []);
 
-    let todosProdutosComEstoque = [];
+  async function fetchVendas() {
+    try {
+      const { data, error } = await supabase
+        .from('vendas')
+        .select('*')
+        .order('id', { ascending: false });
 
-    listasDeChaves.forEach(chave => {
-      const dadosBrutos = localStorage.getItem(chave);
-      if (!dadosBrutos) return;
+      if (error) throw error;
+      if (data) setVendas(data);
+    } catch (error) {
+      console.error('Erro ao buscar vendas:', error.message);
+      alert('Erro ao carregar dados do banco de dados.');
+    }
+  }
 
-      const produtosDaLista = JSON.parse(dadosBrutos);
-      
-      produtosDaLista.forEach(p => {
-        const estoqueBruto = p.estoqueQtd || p.Qtd || p.qtd || p.quantidade;
-        
-        // Só exibe o produto se houver estoque ativo
-        if (estoqueBruto && estoqueBruto !== "0" && estoqueBruto !== 0) {
-          todosProdutosComEstoque.push({
-            itemCodigo: p.itemCodigo || '', 
-            nome: p.modelo || p.produto || 'Sem nome',
-            tamanho: p.tamanho || p.Tam || p.tam || 'U',
-            caracteristicas: p.caracteristicas || p.Características || '',            
-            valorVenda: p.venderPor || p.particular || p.Particular || '' 
-          });
+  // 2. Carrega os produtos varrendo as tabelas reais do Supabase
+  useEffect(() => {
+    async function carregarProdutosDoSupabase() {
+      try {
+        // Suas 5 tabelas do banco de dados
+        const tabelas = ['inverno', 'verao', 'meia_estacao', 'encomendas', 'artesanato'];
+        let todosProdutosComEstoque = [];
+
+        // Buscando tabela por tabela para garantir controle individual de erros
+        for (const tabela of tabelas) {
+          const { data, error } = await supabase
+            .from(tabela)
+            .select('*'); // Seleciona tudo de forma genérica para evitar quebra por coluna inexistente
+
+          if (error) {
+            console.error(`Erro na tabela [${tabela}]:`, error.message);
+            continue; // Se uma tabela falhar, pula para a próxima sem travar o select
+          }
+
+          if (data && data.length > 0) {
+            console.log(`Dados carregados da tabela [${tabela}]:`, data);
+            
+            data.forEach((p, index) => {
+              // Verifica a quantidade em estoque independente da nomenclatura usada na tabela
+              const estoqueReal = Number(p.qtd ?? p.quantidade ?? p.estoque_qtd ?? 0);
+
+              // Traz apenas quem tem estoque
+              if (estoqueReal >= 1) {
+                const nomeProduto = p.modelo || p.produto || p.nome || `Item ${index}`;
+                
+                // Trata tamanhos baseados em medidas ou formato padrão (U, P, M, G)
+                const tamanhoMedidas = p.pescoço || p.torax || p.comprimento
+                  ? `P:${p.pescoço || '-'} T:${p.torax || '-'} C:${p.comprimento || '-'}`
+                  : (p.tamanho || p.Tam || p.tam || 'U');
+
+                todosProdutosComEstoque.push({
+                  itemCodigo: `${tabela}-${p.id}`, 
+                  nome: nomeProduto,
+                  tamanho: tamanhoMedidas,
+                  caracteristicas: p.caracteristicas || p.caracteristica || p.Características || '',            
+                  valorVenda: p.vender_por ?? p.venderPor ?? p.particular ?? p.Particular ?? p.valor ?? 0,
+                  custo: p.custo || p.Custo || 0
+                });
+              }
+            });
+          }
         }
-      });
-    });
 
-    setProdutosDisponiveis(todosProdutosComEstoque);
-  }, []); 
-
-  // Busca e calcula o custo com base no nome do produto selecionado
-  const buscarCustoDoProduto = (nomeProduto) => {
-    if (!nomeProduto) return 0;
-    const listasDeProdutos = [
-      'produtos_inverno_json',
-      'produtos_meiaestacao_json',
-      'produtos_verao_json',
-      'produtos_artesanato_json',
-      'produtos_encomendas_json'
-    ];
-
-    for (let chave of listasDeProdutos) {
-      const produtos = JSON.parse(localStorage.getItem(chave) || '[]');
-      const produtoEncontrado = produtos.find(
-        p => p.modelo?.toLowerCase() === nomeProduto.toLowerCase() || 
-             p.produto?.toLowerCase() === nomeProduto.toLowerCase()
-      );
-
-      if (produtoEncontrado) {
-        // Se houver arranjo de materiais usados, soma os valores gastos
-        if (produtoEncontrado.materiaisUsados && produtoEncontrado.materiaisUsados.length > 0) {
-          return produtoEncontrado.materiaisUsados.reduce((acc, m) => acc + (parseFloat(m.valorGasto) || 0), 0);
-        }
-        const custoBruto = produtoEncontrado.custo || produtoEncontrado.Custo || "0";
-        const custoLimpo = String(custoBruto).replace('R$', '').replace('.', '').replace(',', '.').trim();
-        return parseFloat(custoLimpo) || 0;
+        console.log("Todos os produtos processados com estoque:", todosProdutosComEstoque);
+        setProdutosDisponiveis(todosProdutosComEstoque);
+      } catch (error) {
+        console.error('Erro geral ao carregar produtos do estoque:', error);
       }
     }
-    return 0;
+
+    carregarProdutosDoSupabase();
+  }, []);
+
+  // Busca o custo direto do produto mapeado em memória
+  const buscarCustoDoProduto = (codigoSelecionado) => {
+    const produto = produtosDisponiveis.find(p => p.itemCodigo === codigoSelecionado);
+    return produto ? Number(produto.custo) : 0;
   };
 
-  useEffect(() => {
-    localStorage.setItem('minhas_vendas_json', JSON.stringify(vendas));
-  }, [vendas]);
-
-  // Executado ao selecionar um produto no dropdown
   const handleProdutoChange = (e) => {
     const codigoSelecionado = e.target.value;
     const prodInfo = produtosDisponiveis.find(p => p.itemCodigo === codigoSelecionado);
 
     if (prodInfo) {
-      // Limpa formatações para garantir que seja inserido apenas um número válido e editável
       const valorUnitarioLimpo = String(prodInfo.valorVenda)
         .replace('R$', '')
         .replace('.', '')
@@ -113,7 +120,7 @@ export default function Vendas() {
         produto: prodInfo.nome, 
         tamanho: prodInfo.tamanho,
         caracteristicas: prodInfo.caracteristicas,
-        valorUnitario: valorUnitarioLimpo || '' // Auto-preenche com a sua coluna "Vender Por"
+        valorUnitario: valorUnitarioLimpo || '' 
       });
     } else {
       setNovaVenda({ ...novaVenda, produto: '', valorUnitario: '' });
@@ -125,7 +132,8 @@ export default function Vendas() {
     setNovaVenda({ ...novaVenda, [name]: value });
   };
 
-  const handleSalvarVenda = (e) => {
+  // 3. Salva a nova venda no Supabase
+  const handleSalvarVenda = async (e) => {
     e.preventDefault();
     if (!novaVenda.produto) {
       alert("Por favor, selecione um produto válido em estoque.");
@@ -135,38 +143,63 @@ export default function Vendas() {
     const qtd = parseInt(novaVenda.quantidade) || 1;
     const vUnitario = parseFloat(novaVenda.valorUnitario) || 0;
     
-    const custoUnitario = buscarCustoDoProduto(novaVenda.produto);
+    // Acha o código correto do item selecionado para capturar o custo
+    const codigoAtual = produtosDisponiveis.find(p => p.nome === novaVenda.produto)?.itemCodigo;
+    const custoUnitario = buscarCustoDoProduto(codigoAtual);
+    
     const custoTotalItem = custoUnitario * qtd;
     const valorFinalItem = vUnitario * qtd;
     const lucroItem = valorFinalItem - custoTotalItem;
 
-    const itemVenda = {
-      ...novaVenda,
-      id: Date.now(),
+    const novaVendaDb = {
+      data: novaVenda.data,
+      cliente: novaVenda.cliente,
+      pet: novaVenda.pet,
+      quantidade: qtd,
+      produto: novaVenda.produto,
+      tamanho: novaVenda.tamanho,
+      caracteristicas: novaVenda.caracteristicas,
+      valor_unitario: vUnitario,
+      valor_final: valorFinalItem,
       custo: custoTotalItem,
-      valorFinal: valorFinalItem,
-      lucro: lucroItem
+      lucro: lucroItem,
+      forma_pagamento: novaVenda.formaPagamento,
+      observacao: novaVenda.observacao
     };
 
-    setVendas([...vendas, itemVenda]);
-    
-    // Reseta o formulário mantendo as definições bases limpas
-    setNovaVenda({
-      ...novaVenda,
-      pet: '',
-      quantidade: 1,
-      produto: '',
-      tamanho: 'U',
-      caracteristicas: '',
-      valorUnitario: ''
-    });
+    try {
+      const { data, error } = await supabase
+        .from('vendas')
+        .insert([novaVendaDb])
+        .select();
+
+      if (error) throw error;
+
+      if (data) {
+        setVendas([data[0], ...vendas]);
+        
+        setNovaVenda({
+          ...novaVenda,
+          pet: '',
+          quantidade: 1,
+          produto: '',
+          tamanho: 'U',
+          caracteristicas: '',
+          valorUnitario: '',
+          observacao: ''
+        });
+      }
+    } catch (error) {
+      console.error('Erro ao salvar venda:', error.message);
+      alert('Não foi possível salvar a venda.');
+    }
   };
 
-  // Soma acumulada para mesmo cliente na mesma data
   const calcularSomaAgrupada = (cliente, data) => {
+    if (!cliente || !data) return 0;
     return vendas
-      .filter(v => v.cliente.toLowerCase() === cliente.toLowerCase() && v.data === data)
-      .reduce((acc, v) => acc + v.valorFinal, 0);
+      .filter(v => v.cliente && v.cliente.toLowerCase() === cliente.toLowerCase() && v.data === data)
+      .reduce((acc, v) => acc + (parseFloat(v.valor_final ?? v.valorFinal ?? 0)), 0);
   };
 
   return (
@@ -178,7 +211,6 @@ export default function Vendas() {
         </div>
       </header>
 
-      {/* Formulário estilo Modal */}
       <form onSubmit={handleSalvarVenda} className="vendas-modulo-form">
         <div className="vendas-modulo-grid-campos">
           <div className="vendas-modulo-campo"><label>Data</label><input type="date" name="data" value={novaVenda.data} onChange={handleInputChange} required /></div>
@@ -187,20 +219,24 @@ export default function Vendas() {
           
           <div className="vendas-modulo-campo">
             <label>Produto em Estoque</label>
-            <select name="produto" onChange={handleProdutoChange} required>
+            <select 
+              name="produto" 
+              onChange={handleProdutoChange} 
+              value={produtosDisponiveis.find(p => p.nome === novaVenda.produto)?.itemCodigo || ""} 
+              required
+            >
               <option value="">-- Selecione o Produto --</option>
-              {produtosDisponiveis.map((prod, idx) => (
-                <option key={idx} value={prod.itemCodigo}>
-                  {prod.itemCodigo} - {prod.nome} {prod.caracteristicas} ({prod.tamanho})
+              {produtosDisponiveis.map((prod) => (
+                <option key={prod.itemCodigo} value={prod.itemCodigo}>
+                  {prod.nome} {prod.caracteristicas}
                 </option>
               ))}
             </select>
           </div>
 
           <div className="vendas-modulo-campo" style={{ width: '70px' }}><label>Qtd</label><input type="number" name="quantidade" value={novaVenda.quantidade} onChange={handleInputChange} min="1" required /></div>
-          <div className="vendas-modulo-campo" style={{ width: '70px' }}><label>Tam.</label><input type="text" name="tamanho" value={novaVenda.tamanho} onChange={handleInputChange} /></div>
+          <div className="vendas-modulo-campo" style={{ width: '120px' }}><label>Tam.</label><input type="text" name="tamanho" value={novaVenda.tamanho} onChange={handleInputChange} /></div>
           
-          {/* O CAMPO TRAZ O VALOR AUTOMÁTICO DO ESTOQUE, MAS PERMANECE EDITÁVEL */}
           <div className="vendas-modulo-campo">
             <label>Valor Unit.</label>
             <input 
@@ -218,6 +254,7 @@ export default function Vendas() {
             <select name="formaPagamento" value={novaVenda.formaPagamento} onChange={handleInputChange}>
               <option value="Dinheiro">Dinheiro</option>              
               <option value="Pix">Pix</option>
+              <option value="Cartão de Crédito">Cartão de Crédito</option>
             </select>
           </div>
 
@@ -225,16 +262,16 @@ export default function Vendas() {
             <label>Observação</label>
             <input
                 type="text" 
-                step="0.01" 
                 name="observacao"                                
                 placeholder="Anote" 
+                value={novaVenda.observacao}
+                onChange={handleInputChange}
             />
           </div>
         </div>
         <button type="submit" className="vendas-modulo-btn-submeter"><Plus size={16} /> Lançar Linha</button>
       </form>
 
-      {/* Grid Listagem Azul Marinho Corporativo */}
       <div className="vendas-modulo-tabela-overflow">
         <div className="vendas-modulo-tabela-container">
           <div className="vendas-modulo-linha-head">
@@ -254,23 +291,36 @@ export default function Vendas() {
           </div>
 
           {vendas.map((venda) => {
-            const totalAgrupadoCliente = calcularSomaAgrupada(venda.cliente, venda.data);
+            const vData = venda.data;
+            const vCliente = venda.cliente || '-';
+            const vPet = venda.pet;
+            const vQuantidade = venda.quantidade ?? 1;
+            const vProduto = venda.produto || '-';
+            const vTamanho = venda.tamanho || 'U';
+            const vValorUnitario = venda.valor_unitario ?? venda.valorUnitario ?? 0;
+            const vValorFinal = venda.valor_final ?? venda.valorFinal ?? 0;
+            const vCusto = venda.custo ?? 0;
+            const vLucro = venda.lucro ?? 0;
+            const vFormaPagamento = venda.forma_pagamento ?? venda.formaPagamento ?? '-';
+            const vObservacao = venda.observacao;
+
+            const totalAgrupadoCliente = calcularSomaAgrupada(vCliente, vData);
 
             return (
               <div key={venda.id} className="vendas-modulo-linha-body">
-                <div>{venda.data.split('-').reverse().join('/')}</div>
-                <div style={{ fontWeight: '600' }}>{venda.cliente}</div>
-                <div>{venda.pet || '-'}</div>
-                <div>{venda.quantidade}</div>
-                <div>{venda.produto}</div>
-                <div><span className="vendas-modulo-badge">{venda.tamanho}</span></div>
-                <div>R$ {parseFloat(venda.valorUnitario || 0).toFixed(2).replace('.', ',')}</div>
-                <div>R$ {venda.valorFinal.toFixed(2).replace('.', ',')}</div>
+                <div>{vData ? vData.split('-').reverse().join('/') : '-'}</div>
+                <div style={{ fontWeight: '600' }}>{vCliente}</div>
+                <div>{vPet || '-'}</div>
+                <div>{vQuantidade}</div>
+                <div>{vProduto}</div>
+                <div><span className="vendas-modulo-badge">{vTamanho}</span></div>
+                <div>R$ {parseFloat(vValorUnitario).toFixed(2).replace('.', ',')}</div>
+                <div>R$ {parseFloat(vValorFinal).toFixed(2).replace('.', ',')}</div>
                 <div style={{ color: '#10B981', fontWeight: 'bold' }}>R$ {totalAgrupadoCliente.toFixed(2).replace('.', ',')}</div>
-                <div style={{ color: '#DC2626' }}>R$ {venda.custo.toFixed(2).replace('.', ',')}</div>
-                <div style={{ color: '#2563EB', fontWeight: '600' }}>R$ {venda.lucro.toFixed(2).replace('.', ',')}</div>
-                <div>{venda.formaPagamento}</div>
-                <div>{venda.observacao}</div>
+                <div style={{ color: '#DC2626' }}>R$ {parseFloat(vCusto).toFixed(2).replace('.', ',')}</div>
+                <div style={{ color: '#2563EB', fontWeight: '600' }}>R$ {parseFloat(vLucro).toFixed(2).replace('.', ',')}</div>
+                <div>{vFormaPagamento}</div>
+                <div>{vObservacao || '-'}</div>
               </div>
             );
           })}

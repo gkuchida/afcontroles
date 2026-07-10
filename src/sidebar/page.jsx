@@ -14,7 +14,8 @@ import {
   CloudSun,  
   ClipboardList,
   Cpu,
-  Gift
+  Gift,
+  DollarSign
 } from 'lucide-react';
 import './sidebar.css';
 
@@ -108,10 +109,15 @@ export default function Sidebar() {
         <NavLink to="/vendas" className={({ isActive }) => isActive ? "nav-item active" : "nav-item"}>
           <ShoppingCart size={20} />
           Vendas
-        </NavLink>
+        </NavLink>        
       </nav>
 
       <footer className="sidebar-footer">
+        <NavLink to="/financeiro" className={({ isActive }) => isActive ? "nav-item active" : "nav-item"}>
+          <DollarSign size={20} />
+          Financeiro
+        </NavLink>
+
         <NavLink to="/configuracoes" className={({ isActive }) => isActive ? "nav-item active" : "nav-item"}>
           <Settings size={20} />
           Configurações
