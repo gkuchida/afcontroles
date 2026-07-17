@@ -13,7 +13,7 @@ export default function Estoque() {
   const [novoItem, setNovoItem] = useState({
     categoria: '', descricao: '', material: '', cor: '', altura: '',
     largura: '', areaQuantidade: '', valorPago: '', valorUnitario: '',
-    quantidadeEstoque: '', observacoes: '', data_compra: '', loja: ''
+    quantidadeEstoque: '', observacoes: ''
   });
 
   // 1. CARREGAR DADOS DO SUPABASE AO ABRIR A PÁGINA
@@ -85,9 +85,7 @@ export default function Estoque() {
       valorUnitario: item.valorm ? String(item.valorm).replace('.', ',') : '',
       quantidadeEstoque: item.qtdestoque ? String(item.qtdestoque).replace('.', ',') : '',
       descricao: item.descricao || '',
-      observacoes: item.observacao || '', // Mapeado da coluna correta
-      data_compra: item.data_compra || '',
-      loja: item.loja || ''
+      observacoes: item.observacoes || ''
     });
     setIsModalAberto(true);
   };
@@ -110,9 +108,7 @@ export default function Estoque() {
       valorPago: '', 
       valorUnitario: '',
       quantidadeEstoque: '', 
-      observacoes: '',
-      data_compra: '',
-      loja: ''
+      observacoes: ''
     });
     setIsModalAberto(true);
   };
@@ -123,7 +119,7 @@ export default function Estoque() {
     setNovoItem({
       categoria: '', descricao: '', material: '', cor: '', altura: '',
       largura: '', areaQuantidade: '', valorPago: '', valorUnitario: '',
-      quantidadeEstoque: '', observacoes: '', data_compra: '', loja: ''
+      quantidadeEstoque: '', observacoes: ''
     });
   };
 
@@ -142,7 +138,7 @@ export default function Estoque() {
     
     const qtdEstoqueFinal = novoItem.quantidadeEstoque || novoItem.areaQuantidade;
 
-    // Criando o mapeamento exato com as colunas do Supabase
+    // Criando o mapeamento exato com as colunas da sua imagem no Supabase
     const dadosParaO_Banco = {
       categoria: novoItem.categoria || 'Outros',
       descricao: novoItem.descricao,
@@ -153,9 +149,7 @@ export default function Estoque() {
       pago: tratarNumero(novoItem.valorPago) || 0,
       valorm: tratarNumero(novoItem.valorUnitario) || 0,
       qtdestoque: tratarNumero(qtdEstoqueFinal) || 0,
-      observacao: novoItem.observacoes || '',
-      data_compra: novoItem.data_compra || null, // Se estiver vazio, salva como nulo
-      loja: novoItem.loja || null
+      observacao: novoItem.observacoes || '' // CORREÇÃO: Enviando como 'observacao' (singular) conforme a tabela
     };
 
     try {
@@ -188,21 +182,6 @@ export default function Estoque() {
 
   const temMedidas = novoItem.altura && novoItem.largura;
   const temPrecoEArea = novoItem.valorPago && novoItem.areaQuantidade;
-
-  // Função auxiliar para formatar a data na exibição da tabela (DD/MM/AAAA)
-  const formatarData = (dataString) => {
-    if (!dataString) return '-';
-    const [ano, mes, dia] = dataString.split('-');
-    return `${dia}/${mes}/${ano}`;
-  };
-
-  // DEFINIÇÃO EXATA DA LARGURA DAS 14 COLUNAS DA SUA TABELA
-  const estiloGridDasColunas = {
-    display: 'grid',
-    gridTemplateColumns: '45px 110px minmax(180px, 1fr) 100px 70px 70px 85px 95px 95px 105px 105px 90px 150px 60px',
-    gap: '10px',
-    alignItems: 'center'
-  };
 
   return (
     <div className="estoque-container">
@@ -244,7 +223,7 @@ export default function Estoque() {
                       <option value="Outros">Outros</option>                      
                     </select>
                   </div>
-                  
+                 
                   <div className="linha-dupla">
                     <div className="campo-input">
                       <label>Material</label>
@@ -261,12 +240,12 @@ export default function Estoque() {
                         <option value="Moletom">Moletom</option>
                         <option value="NylonE">Nylon Emborrachado</option> 
                         <option value="Nylon7">Nylon 70</option>   
-                        <option value="Pele">Pele</option>                                                                                                                                                                                                            
+                        <option value="Pele">Pele</option>                                                                                                                                                                                
                         <option value="Ribana">Ribana</option>                      
-                        <option value="Soft">Soft</option>                                                                                                                                                                                                            
+                        <option value="Soft">Soft</option>                                                                                                                                                                                
                         <option value="TricolineE">Tricoline Estampado</option>                      
-                        <option value="TricolineF">Tricoline Festivo</option>             
-                        <option value="TricolineL">Tricoline Liso</option>                                                                                                                                                                                                                                                                                                  
+                        <option value="TricolineF">Tricoline Festivo</option>           
+                        <option value="TricolineL">Tricoline Liso</option>                                                                                                                                                                                                                                                                                                                        
                       </select>
                     </div>
                     <div className="campo-input">
@@ -278,17 +257,6 @@ export default function Estoque() {
                   <div className="campo-input">
                     <label>Descrição</label>
                     <input type="text" name="descricao" value={novoItem.descricao} onChange={handleInputChange} placeholder="Ex: S01 - Soft Rosa" />
-                  </div>
-
-                  <div className="linha-dupla">
-                    <div className="campo-input">
-                      <label>Data da Compra</label>
-                      <input type="date" name="data_compra" value={novoItem.data_compra} onChange={handleInputChange} />
-                    </div>
-                    <div className="campo-input">
-                      <label>Loja / Fornecedor</label>
-                      <input type="text" name="loja" value={novoItem.loja} onChange={handleInputChange} placeholder="Ex: Tecidos Online" />
-                    </div>
                   </div>
                 </div>
 
@@ -361,22 +329,18 @@ export default function Estoque() {
       )}
 
       <div className="overflow-lista">
-        <div className="lista-estoque" style={{ minWidth: '1200px' }}>
-          
-          {/* APLICADO O TRATAMENTO DE ALINHAMENTO NO HEADER */}
-          <div className="lista-header" style={estiloGridDasColunas}>
+        <div className="lista-estoque">
+          <div className="lista-header">
             <div>ID</div>
             <div>Categoria</div>
             <div>Descrição</div>
-            <div>Material</div>            
+            <div>Material</div>
             <div>Altura</div>
             <div>Largura</div>
             <div>Área/Qtd</div>
             <div>Valor Pago</div>
             <div>Valor/m²</div>
             <div>Qtd Estoque</div>
-            <div>Data compra</div>
-            <div>Loja</div>
             <div>Observações</div>
             <div style={{ textAlign: 'center' }}>Ações</div>
           </div>
@@ -387,12 +351,10 @@ export default function Estoque() {
             <div style={{ padding: '20px', textAlign: 'center', color: '#64748B' }}>Nenhum item cadastrado no estoque.</div>
           ) : (
             estoque.map((item) => (
-              
-              /* APLICADO O TRATAMENTO DE ALINHAMENTO NAS LINHAS */
-              <div className="lista-item" key={item.id} style={estiloGridDasColunas}>
+              <div className="lista-item" key={item.id}>
                 <div style={{ fontWeight: 'bold', color: '#1E293B' }}>{item.id}</div>
                 <div><span className="item-categoria">{item.categoria || 'Geral'}</span></div>
-                <div className="item-descricao" style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{item.descricao}</div>
+                <div className="item-descricao">{item.descricao}</div>
                 <div>{item.material || '-'}</div>
                 <div>{item.altura !== null ? String(item.altura).replace('.', ',') : '-'}</div>
                 <div>{item.largura !== null ? String(item.largura).replace('.', ',') : '-'}</div>
@@ -400,9 +362,7 @@ export default function Estoque() {
                 <div>{item.pago !== null ? `R$ ${String(item.pago).replace('.', ',')}` : '-'}</div>
                 <div>{item.valorm !== null ? `R$ ${String(item.valorm).replace('.', ',')}` : '-'}</div>
                 <div>{item.qtdestoque !== null ? String(item.qtdestoque).replace('.', ',') : '-'}</div>
-                <div>{formatarData(item.data_compra)}</div>
-                <div>{item.loja || '-'}</div>
-                <div style={{ color: '#64748b', fontSize: '13px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{item.observacao || '-'}</div>
+                <div style={{ color: '#64748b', fontSize: '13px' }}>{item.observacoes || ''}</div>
                 
                 <div style={{ display: 'flex', justifyContent: 'center' }}>
                   <button 

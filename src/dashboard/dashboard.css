@@ -174,3 +174,48 @@
   color: #666;
   padding: 20px;
 }
+/* ==========================================================================
+   MEDIA QUERIES - REGRAS ESPECÍFICAS PARA CELULARES (ATÉ 768px)
+   ========================================================================== */
+   @media (max-width: 768px) {
+  
+    /* Ajuste da Caixa de Boas-vindas */
+    .dashboard-welcome-box {
+      flex-direction: column; /* Empilha o texto e o ícone verticalmente */
+      text-align: center;
+      padding: 24px;
+      gap: 20px;
+    }
+  
+    .welcome-text h1 {
+      font-size: 22px; /* Diminui o título para caber no celular */
+    }
+  
+    .welcome-text p {
+      font-size: 14px;
+    }
+  
+    .welcome-icon-wrapper {
+      padding: 15px; /* Reduz ligeiramente o tamanho da bola do ícone */
+    }
+  
+    /* Grid de Cards Estatísticos */
+    .dashboard-grid {
+      grid-template-columns: 1fr; /* Força os cards a ocuparem 100% da largura, empilhados */
+      gap: 12px;
+    }
+  
+    .dashboard-card {
+      padding: 16px; /* Economiza espaço interno */
+    }
+  
+    .card-info p {
+      font-size: 20px; /* Diminui os números gigantes */
+    }
+  
+    /* Ajustes Gerais do Painel de Baixo */
+    .dashboard-full-card {
+      padding: 12px;
+      margin-top: 16px;
+    }
+  }
