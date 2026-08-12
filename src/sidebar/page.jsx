@@ -7,15 +7,15 @@ import {
   ShoppingCart, 
   Settings, 
   Scissors, 
-  Snowflake, 
-  Sun, 
+  Snowflake,   
   ChevronDown, 
   ChevronUp,
   CloudSun,  
   ClipboardList,
   Cpu,
   Gift,
-  DollarSign
+  DollarSign,
+  Dog
 } from 'lucide-react';
 import './sidebar.css';
 
@@ -45,6 +45,12 @@ export default function Sidebar() {
           Estoque
         </NavLink>
 
+        {/* Produção */}
+        <NavLink to="/producao" className={({ isActive }) => isActive ? "nav-item active" : "nav-item"}>
+          <Package size={20} />
+          Produção
+        </NavLink>        
+
         {/* --- CATEGORIA MULTI-NÍVEL: PRODUÇÃO --- */}
         <div className="sidebar-grupo">
           {/* Botão que apenas abre/fecha a sanfona */}
@@ -54,8 +60,8 @@ export default function Sidebar() {
             onClick={() => setIsProducaoAberto(!isProducaoAberto)}
           >
             <div className="grupo-pai-conteudo">
-              <Cpu size={20} />
-              Produção
+              <ClipboardList size={20} />
+              Cadastros
             </div>
             {isProducaoAberto ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
           </button>
@@ -64,31 +70,28 @@ export default function Sidebar() {
           {isProducaoAberto && (
             <div className="sidebar-submenu">
 
-              <NavLink to="/produtos/artesanato" className={({ isActive }) => isActive ? "nav-subitem active-sub" : "nav-subitem"}>
-                <Scissors size={16} />
-                Artesanato
-              </NavLink>
-              
-              <NavLink to="/produtos/encomendas" className={({ isActive }) => isActive ? "nav-subitem active-sub" : "nav-subitem"}>
-                <ClipboardList size={16} />
-                Encomendas
+              <NavLink to="/dadosCliente" className={({ isActive }) => isActive ? "nav-subitem active-sub" : "nav-subitem"}>
+                <Dog size={16} />
+                Cliente/Pet
+              </NavLink>            
+          
+
+              <NavLink to="/dadosEstoque" className={({ isActive }) => isActive ? "nav-subitem active-sub" : "nav-subitem"}>
+                <Package size={16} />
+                Dados para Tabelas
               </NavLink>
 
-              <NavLink to="/produtos/inverno" className={({ isActive }) => isActive ? "nav-subitem active-sub" : "nav-subitem"}>
-                <Snowflake size={16} />
-                Inverno
-              </NavLink>
-
+            {/*
               <NavLink to="/produtos/meiaestacao" className={({ isActive }) => isActive ? "nav-subitem active-sub" : "nav-subitem"}>
-                <CloudSun size={16} />
-                Meia Estação
+                <Package size={16} />
+                Dados para Produção
               </NavLink>
-
+              {/*--Guardar
               <NavLink to="/produtos/verao" className={({ isActive }) => isActive ? "nav-subitem active-sub" : "nav-subitem"}>
                 <Sun size={16} />
-                Verão
-              </NavLink>
-
+                Tamanhos
+              </NavLink> */}
+            
             </div>
           )}
         </div>
@@ -99,11 +102,11 @@ export default function Sidebar() {
           Fidelidade
         </NavLink> 
 
-        {/* Clientes */}
+        {/* Clientes 
         <NavLink to="/clientes" className={({ isActive }) => isActive ? "nav-item active" : "nav-item"}>
           <Users size={20} />
           Clientes
-        </NavLink> 
+        </NavLink> */}
 
         {/* Vendas */}
         <NavLink to="/vendas" className={({ isActive }) => isActive ? "nav-item active" : "nav-item"}>

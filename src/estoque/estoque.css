@@ -1,305 +1,220 @@
-/* src/estoque/estoque.css */
-.estoque-container {
-    padding: 24px;
-    font-family: 'Segoe UI', system-ui, sans-serif;
-    background-color: #F8F9FA;
-    min-height: 100vh;
+/* ==========================================================================
+   ESTILOS GERAIS DO PAINEL DE ESTOQUE (ATELIÊ & LOJA)
+   ========================================================================== */
+
+   :root {
+    --primary: #d9777f;       /* Rosa Ateliê / Terracota Suave */
+    --primary-hover: #c45d66; /* Rosa tom fechado */
+    --bg-main: #fcf9f7;       /* Fundo creme / Off-white */
+    --bg-card: #ffffff;       /* Fundo dos quadros */
+    --text-main: #332d2b;     /* Texto escuro suave */
+    --text-muted: #786f6c;    /* Texto secundário */
+    --border-color: #e8e1dd;  /* Bordas suaves */
+    --input-bg: #faf8f7;      /* Fundo de inputs */
+    --accent-light: #fbeee8;  /* Destaque suave */
+    --radius: 10px;
+    --shadow: 0 4px 15px rgba(0, 0, 0, 0.04);
   }
   
-  /* Topo da página alinhado */
-  .estoque-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between; 
+  body {
+    background-color: var(--bg-main);
+    color: var(--text-main);
+    font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    margin: 0;
+    padding: 0;
+  }
+  
+  /* Container Principal */
+  .estoque-container {
+    max-width: 1280px;
+    margin: 40px auto;
+    padding: 0 20px;
+  }
+  
+  .estoque-title {
+    font-size: 28px;
+    font-weight: 700;
+    color: var(--text-main);
     margin-bottom: 24px;
-    border-bottom: 2px solid #5C554E;
-    padding-bottom: 16px;
+    letter-spacing: -0.5px;
   }
   
-  .header-titulo {
-    display: flex;
-    align-items: center;
-    gap: 12px;
+  /* ==========================================================================
+     FORMULÁRIO DE CADASTRO
+     ========================================================================== */
+  
+  .estoque-card {
+    background: var(--bg-card);
+    padding: 28px;
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    border: 1px solid var(--border-color);
+    margin-bottom: 40px;
   }
   
-  .header-titulo h1 {
-    color: #0f172a;
-    margin: 0;
-    font-size: 24px;
-    font-weight: 600;
-  }
-  
-  /* Botão de Adicionar principal */
-  .btn-abrir-cadastro {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    background-color: #1E3A8A;
-    color: white;
-    border: none;
-    padding: 10px 18px;
-    border-radius: 8px;
-    cursor: pointer;
-    font-weight: 600;
-    font-size: 14px;
-    transition: background-color 0.2s;
-  }
-  
-  .btn-abrir-cadastro:hover {
-    background-color: #1E40AF;
-  }
-
-  .btn-editar{
-    color: #1E3A8A;
-  }
-  
-  /* --- ESTILO DO POP-UP (MODAL) --- */
-  .modal-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background-color: rgba(15, 23, 42, 0.6); /* Fundo escurecido atrás do pop-up */
-    backdrop-filter: blur(4px);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    z-index: 999; /* Garante que fica na frente de tudo */
-  }
-  
-  .modal-content {
-    background-color: #ffffff;
-    width: 90%;
-    max-width: 850px;
-    padding: 24px;
-    border-radius: 12px;
-    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
-    animation: surgindo 0.2s ease-out;
-  }
-  
-  @keyframes surgindo {
-    from { transform: scale(0.95); opacity: 0; }
-    to { transform: scale(1); opacity: 1; }
-  }
-  
-  .modal-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: 20px;
-    border-bottom: 1px solid #e2e8f0;
-    padding-bottom: 12px;
-  }
-  
-  .modal-header h2 {
-    margin: 0;
+  .estoque-card-title {
     font-size: 18px;
-    color: #0f172a;
+    font-weight: 600;
+    color: var(--text-main);
+    margin-top: 0;
+    margin-bottom: 20px;
+    padding-bottom: 12px;
+    border-bottom: 2px solid var(--accent-light);
   }
   
-  .btn-fechar-modal {
-    background: none;
-    border: none;
-    color: #94a3b8;
-    cursor: pointer;
-    padding: 4px;
-    border-radius: 6px;
-    display: flex;
-  }
-  
-  .btn-fechar-modal:hover {
-    color: #64748b;
-    background-color: #f1f5f9;
-  }
-  
-  /* Formulário dentro do Pop-up */
-  .grid-formulario {
+  /* Grid de Inputs */
+  .form-grid {
     display: grid;
-    grid-template-columns: 1ft 1fr; /* 2 colunas bem organizadas no pop-up */
-    gap: 32px;
-    margin: 20px 0;    
-  }
-
-  /* Cada subseção agora é um bloco independente */
-    .subsecao-form {
-        display: flex;
-        flex-direction: column;
-        gap: 16px;                      /* Espaçamento vertical entre os inputs de cada coluna */
-    }
-
-/* Mantém os inputs menores (como Altura e Largura) lado a lado na mesma linha */
-.linha-dupla {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 12px;
+    grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+    gap: 18px;
   }
   
-  .col-2 {
-    grid-column: span 2;
-  }
-  
-  .campo-input {
+  .form-group {
     display: flex;
     flex-direction: column;
-    gap: 6px;        
   }
   
-  .campo-input label {
-    font-size: 12px;
+  .form-group-full {
+    grid-column: 1 / -1;
+  }
+  
+  .form-group label {
+    font-size: 13px;
     font-weight: 600;
-    color: #64748b;
+    color: var(--text-muted);
+    margin-bottom: 6px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
   }
   
-  .campo-input input {
-    padding: 10px;
-    border: 1px solid #DBEAFE;
-    border-radius: 6px;
-    font-size: 14px;
-  }
-
-  .campo-input input:focus{
-    outline: none;
-    border-color: #60A5FA;
-    box-shadow: 0 0 0 1px #1E3A8A;
-  }
-
-  .campo-input select {
+  /* Estilo padronizado para Inputs e Selects */
+  .input-customizado,
+  .select-customizado {
     width: 100%;
-    height: 39px;
-    padding: 10px;
-    border: 1px solid #DBEAFE;
-    border-radius: 6px;
-    color: #1E293B;
-    background-color: #FFFFFF;
-    cursor: pointer;
+    height: 42px;
+    padding: 0 14px;
+    font-size: 14px;
+    color: var(--text-main);
+    background-color: var(--input-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
     box-sizing: border-box;
-    font-size: 14px;
-  }
-  
-  .campo-input select:focus {
     outline: none;
-    border-color: #60A5FA;
-  }
-
-  .linha-dupla {
-    display: grid;
-    grid-template-columns: 1fr 1fr; /* Divide o espaço em duas colunas idênticas (50% cada) */
-    gap: 16px;                      /* Espaço perfeito entre os dois campos da linha */
-    align-items: end;               /* Mantém os inputs alinhados por baixo, caso as labels variem de tamanho */
+    transition: all 0.2s ease;
   }
   
-  /* Garante que o input ou select dentro da linha dupla ocupe 100% da sua respectiva coluna */
-  .linha-dupla .campo-input {
-    width: 100%;
+  .select-customizado {
+    cursor: pointer;
+    appearance: none;
+    background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%3c786f6c' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    background-size: 16px;
+    padding-right: 36px;
   }
   
-  .modal-footer {
+  .input-customizado:focus,
+  .select-customizado:focus {
+    border-color: var(--primary);
+    background-color: #ffffff;
+    box-shadow: 0 0 0 3px rgba(217, 119, 127, 0.15);
+  }
+  
+  /* Inputs bloqueados/desativados */
+  .input-customizado:read-only {
+    background-color: #f1ece9;
+    color: var(--text-muted);
+    cursor: not-allowed;
+    border-style: dashed;
+  }
+  
+  /* Botão de Envio */
+  .btn-submit {
     margin-top: 24px;
-    display: flex;
-    justify-content: flex-end;
-    gap: 12px;
-    border-top: 1px solid #e2e8f0;
-    padding-top: 16px;
-  }
-  
-  .btn-cancelar {
-    background-color: #DBEAFE;
-    color: #1E40AF;
+    padding: 12px 28px;
+    font-size: 15px;
+    font-weight: 600;
+    color: #ffffff;
+    background-color: var(--primary);
     border: none;
-    padding: 10px 18px;
     border-radius: 8px;
     cursor: pointer;
-    font-weight: 600;
+    transition: background-color 0.2s ease, transform 0.1s ease;
   }
+  
+  .btn-submit:hover:not(:disabled) {
+    background-color: var(--primary-hover);
+  }
+  
+  .btn-submit:active:not(:disabled) {
+    transform: scale(0.98);
+  }
+  
+  .btn-submit:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+  
+ /* Container que gera a rolagem se a tela for pequena */
+/* Container com rolagem suave caso passe da tela */
+.tabela-div {
+  width: 100%;
+  overflow-x: auto;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+}
 
-  .btn-cancelar:hover{
-    background-color: #BFDBFE;
-  }
-  
-  .btn-salvar {
-    background-color: #1E3A8A;
-    color: white;
-    border: none;
-    padding: 10px 18px;
-    border-radius: 8px;
-    cursor: pointer;
-    font-weight: 600;
-  }
+/* Linhas da Tabela */
+.tabela-linha {
+  display: flex;
+  align-items: center;
+  border-bottom: 1px solid var(--border-color);
+  min-width: 1300px; /* Aumentado para acomodar o texto estendido */
+}
 
-  .btn-salvar:hover{
-    background-color:#1E40AF;
-  }
-  
-  /* --- LISTA FORMATO TABELA --- */
-  .overflow-lista {
-    overflow-x: auto;
-    padding-bottom: 8px;
-  }
-  
-  .lista-estoque {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-    min-width: 100%; /* Mantém a largura mínima para o scroll se necessário */
-  }
-  
-  .lista-header, .lista-item {
-    display: grid;
-    /* Ajustado com valores proporcionais e mínimos para caber tudo na tela */
-    grid-template-columns: 45px 90px 3.5fr 80px 70px 70px 85px 95px 110px 110px 2fr 60px;
-    gap: 8px; /* Reduzido levemente o espaço entre colunas para respirar horizontalmente */
-    align-items: center;
-    padding: 10px 16px;
-    font-size: 14px;
-  }
-  
-  .lista-header {
-    background-color: #60A5FA;
-    border-radius: 6px;
-    font-weight: bold;
-    color: #FFFFFF;
-    font-size: 13px;    
-  }
-  
-  .lista-item {
-    background-color: #EFF6FF;
-    border-bottom: 2px solid #DBEAFE;
-    border-radius: 6px;
-    color: #334155;
-  }
-  
-  .lista-item:hover {
-    border-color: #DBEAFE;
-    background-color: #F8FAFC;
-  }
-  
-  .item-descricao {
-    font-weight: 500;
-    color: #1E293B;
-  }
-  
-  .item-categoria {
-    background-color: #DBEAFE;
-    padding: 2px 6px;
-    border-radius: 4px;
-    font-size: 12px;
-    font-weight: 500;
-  }
-  
-  .btn-deletar {
-    background: none;
-    border: none;
-    color: #94a3b8;
-    cursor: pointer;
-    padding: 6px;
-    border-radius: 6px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
-  
-  .btn-deletar:hover {
-    color: #ef4444;
-    background-color: #fee2e2;
-  }
+.tabela-linha:last-child {
+  border-bottom: none;
+}
+
+.tabela-linha:hover:not(.tabela-header) {
+  background-color: #fdf6f3;
+}
+
+/* Estilo do Cabeçalho */
+.tabela-header {
+  background-color: var(--accent-light);
+  font-weight: 600;
+  color: var(--text-main);
+  border-bottom: 2px solid var(--border-color);
+}
+
+/* Células de dados */
+.tabela-linha > div {
+  padding: 12px 14px;
+  font-size: 14px;
+  white-space: nowrap;
+  box-sizing: border-box;
+}
+
+/* Novas larguras ajustadas (Sem cortar o texto) */
+.col-cat  { width: 130px; }
+.col-mat  { width: 130px; }
+.col-cor  { width: 100px; }
+.col-est  { width: 120px; }
+.col-desc { width: 240px; } /* Aumentado bastante */
+.col-dim  { width: 90px;  } /* Aumentado p/ não cortar "Largura" */
+.col-qtd  { width: 100px; }
+.col-val  { width: 120px; } /* Aumentado p/ não cortar "Valor Pago" */
+.col-data { width: 130px; } /* Aumentado p/ não cortar "Data Compra" */
+.col-loja { width: 110px; }
+.col-obs  { width: 160px; }
+
+/* Estado Vazio */
+.tabela-vazia {
+  padding: 24px;
+  text-align: center;
+  color: var(--text-muted);
+  font-style: italic;
+}

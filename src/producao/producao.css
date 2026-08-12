@@ -1,0 +1,110 @@
+/* =========================================================
+   ESTILOS ESPECÍFICOS PARA A FICHA DE PRODUÇÃO
+   ========================================================= */
+
+/* Grid do Formulário de Produção (4 colunas em telas grandes) */
+.form-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 12px;
+    margin-bottom: 15px;
+  }
+  
+  /* Container do grupo de input/label */
+  .form-group {
+    display: flex;
+    flex-direction: column;
+  }
+  
+  .form-group label {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-main);
+    margin-bottom: 4px;
+  }
+  
+  /* Inputs padronizados para o formulário de produção */
+  .input-customizado {
+    width: 100%;
+    padding: 8px 12px;
+    font-size: 13.5px;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius);
+    background-color: var(--bg-card);
+    color: var(--text-main);
+    outline: none;
+    box-sizing: border-box;
+    transition: border-color 0.2s ease;
+  }
+  
+  .input-customizado:focus {
+    border-color: var(--primary-hover);
+  }
+  
+  .input-customizado[readonly] {
+    background-color: #f2ede8;
+    color: var(--text-muted);
+    cursor: not-allowed;
+  }
+  
+  /* Estilização para o botão de adicionar mais um material */
+  .btn-submit {
+    padding: 10px 16px;
+    font-weight: 600;
+    font-size: 13.5px;
+    color: #ffffff;
+    border: none;
+    border-radius: var(--radius);
+    cursor: pointer;
+    transition: opacity 0.2s ease;
+  }
+  
+  .btn-submit:hover {
+    opacity: 0.9;
+  }
+  
+  /* Destaque para a linha de Totais (Custo, Venda e Vender Por) */
+  .form-grid .form-group:last-child .input-customizado {
+    background-color: #fcf0ea;
+    border-color: var(--primary-hover);
+    font-size: 15px;
+  }
+
+  /* Container que envolve a tabela */
+.historico-table-container {
+    width: 100%;
+    max-height: 450px;
+    overflow-y: auto;
+    overflow-x: auto;
+    border: 1px solid #e0e0e0;
+    border-radius: 4px;
+  }
+  
+  /* Garante que o cabeçalho fique fixo ao rolar */
+  .historico-table thead {
+    position: sticky;
+    top: 0;
+    background-color: #f8f9fa;
+    z-index: 1;
+  }
+  
+  .historico-table th {
+    padding: 10px 8px;
+    border: 1px solid #dee2e6;
+    white-space: nowrap;
+    background-color: #f8f9fa;
+  }
+
+  .historico-full-width {
+    width: 100vw;
+    position: relative;
+    left: 10%;
+    right: 10%;
+    margin-left: -50vw;
+    margin-right: -50vw;
+    background-color: #fff;
+    padding: 20px;
+    box-sizing: border-box;
+    margin-top: 40px;
+  }
+

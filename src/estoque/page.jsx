@@ -1,423 +1,414 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Pencil, Package, X } from 'lucide-react';
-// CORREÇÃO 1: Importe a instância do 'supabase' exportada pelo seu arquivo de configuração
 import { supabase } from '../supabaseCliente';
 import './estoque.css';
 
-export default function Estoque() {
-  const [estoque, setEstoque] = useState([]);
-  const [isModalAberto, setIsModalAberto] = useState(false);
-  const [itemSendoEditado, setItemSendoEditado] = useState(null);
-  const [loading, setLoading] = useState(true);
-  
-  const [novoItem, setNovoItem] = useState({
-    categoria: '', descricao: '', material: '', cor: '', altura: '',
-    largura: '', areaQuantidade: '', valorPago: '', valorUnitario: '',
-    quantidadeEstoque: '', observacoes: '', data_compra: '', loja: ''
+export default function CadastroEstoque() {
+  const [itens, setItens] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [outroMaterial, setOutroMaterial] = useState('');
+
+  // Estado do formulário refletindo todas as colunas da planilha
+  const [formData, setFormData] = useState({
+    categoria: '',
+    material: '',
+    cor: '',
+    estampa: '',
+    descricao: '',
+    altura: '',
+    largura: '',
+    area: '',
+    valorm: '',
+    pago: '',
+    data_compra: '',
+    loja: '',
+    observacao: ''
   });
 
-  // 1. CARREGAR DADOS DO SUPABASE AO ABRIR A PÁGINA
-  const buscarEstoque = async () => {
+  // Busca os dados do estoque ao carregar a página
+  useEffect(() => {
+    fetchEstoque();
+  }, []);
+
+  // 2. useEffect para automatizar Descrição e Área/Quantidade  
+  useEffect(() => {
+    const valorMaterial = formData.material === 'Outros' ? outroMaterial : formData.material;
+  
+    const partesDescricao = [valorMaterial, formData.cor, formData.estampa]
+      .filter(Boolean)
+      .join(' - ');
+  
+    // Tratamento de vírgulas e espaços
+    const altStr = String(formData.altura).replace(',', '.').trim();
+    const largStr = String(formData.largura).replace(',', '.').trim();
+    const pagoStr = String(formData.pago).replace(',', '.').trim();
+    const areaStr = String(formData.area).replace(',', '.').trim();
+  
+    const alt = parseFloat(altStr);
+    const larg = parseFloat(largStr);
+    const pagoVal = parseFloat(pagoStr);
+  
+    const ambosPreenchidos = !isNaN(alt) && !isNaN(larg) && altStr !== '' && largStr !== '';
+  
+    // Determina a área final para o cálculo de valorm
+    let areaFinal = parseFloat(areaStr);
+    if (ambosPreenchidos) {
+      areaFinal = alt * larg;
+    }
+  
+    // Calcula o valor por metro/unidade se houver pago e area válidos
+    let valorMetroCalculado = '';
+    if (!isNaN(pagoVal) && !isNaN(areaFinal) && areaFinal > 0) {
+      valorMetroCalculado = (pagoVal / areaFinal).toFixed(2);
+    }
+  
+    setFormData((prev) => {
+      if (ambosPreenchidos) {
+        const areaCalculada = areaFinal.toFixed(2);
+        return {
+          ...prev,
+          descricao: partesDescricao,
+          area: areaCalculada,
+          valorm: valorMetroCalculado
+        };
+      }
+  
+      return {
+        ...prev,
+        descricao: partesDescricao,
+        valorm: valorMetroCalculado
+      };
+    });
+  
+  }, [
+    formData.material, 
+    outroMaterial, 
+    formData.cor, 
+    formData.estampa, 
+    formData.altura, 
+    formData.largura,
+    formData.area,
+    formData.pago
+  ]);
+
+  async function fetchEstoque() {
     try {
       setLoading(true);
       const { data, error } = await supabase
         .from('estoque')
         .select('*')
-        .order('id', { ascending: true });
+        .order('id', { ascending: false });
 
       if (error) throw error;
-      setEstoque(data || []);
+      setItens(data || []);
     } catch (error) {
-      console.error('Erro ao buscar dados do Supabase:', error.message);
-      alert('Erro ao carregar dados do banco de dados.');
+      alert('Erro ao carregar o estoque: ' + error.message);
     } finally {
       setLoading(false);
     }
-  };
+  }
 
-  useEffect(() => {
-    buscarEstoque();
-  }, []);
-
-  // 2. CÁLCULOS AUTOMÁTICOS DE ÁREA E VALOR POR M²
-  useEffect(() => {
-    const alt = parseFloat(novoItem.altura.replace(',', '.'));
-    const larg = parseFloat(novoItem.largura.replace(',', '.'));
-    
-    let areaCalculada = novoItem.areaQuantidade;
-
-    if (!isNaN(alt) && !isNaN(larg) && alt > 0 && larg > 0) {
-      const contaArea = alt * larg;
-      areaCalculada = contaArea.toFixed(2).replace('.', ',');
-    }
-
-    const pago = parseFloat(novoItem.valorPago.replace(',', '.'));
-    const areaParaConta = parseFloat(areaCalculada.replace(',', '.'));
-    let valorUnitCalculado = novoItem.valorUnitario;
-
-    if (!isNaN(pago) && !isNaN(areaParaConta) && areaParaConta > 0) {
-      const contaUnitario = pago / areaParaConta;
-      valorUnitCalculado = contaUnitario.toFixed(2).replace('.', ',');
-    }
-
-    if (areaCalculada !== novoItem.areaQuantidade || valorUnitCalculado !== novoItem.valorUnitario) {
-      setNovoItem(prev => ({
-        ...prev,
-        areaQuantidade: areaCalculada,
-        valorUnitario: valorUnitCalculado
-      }));
-    }
-  }, [novoItem.altura, novoItem.largura, novoItem.valorPago, novoItem.areaQuantidade, novoItem.valorUnitario]);
-
-  const handleInputChange = (e) => {
+  // Atualiza os valores do formulário conforme digita
+  const handleChange = (e) => {
     const { name, value } = e.target;
-    setNovoItem({ ...novoItem, [name]: value });
+    setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handlePrepararEdicao = (item) => {
-    setItemSendoEditado(item);
-    setNovoItem({
-      ...item,
-      altura: item.altura ? String(item.altura).replace('.', ',') : '',
-      largura: item.largura ? String(item.largura).replace('.', ',') : '',
-      areaQuantidade: item.area ? String(item.area).replace('.', ',') : '',
-      valorPago: item.pago ? String(item.pago).replace('.', ',') : '',
-      valorUnitario: item.valorm ? String(item.valorm).replace('.', ',') : '',
-      quantidadeEstoque: item.qtdestoque ? String(item.qtdestoque).replace('.', ',') : '',
-      descricao: item.descricao || '',
-      observacoes: item.observacao || '', // Mapeado da coluna correta
-      data_compra: item.data_compra || '',
-      loja: item.loja || ''
-    });
-    setIsModalAberto(true);
-  };
-
-  const handleAbrirCadastro = () => {
-    const proximoNumero = estoque.length > 0 
-      ? Math.max(...estoque.map(item => Number(item.id) || 0)) + 1 
-      : 1;
-
-    const numeroFormatado = String(proximoNumero).padStart(2, '0');
-
-    setNovoItem({
-      categoria: '', 
-      descricao: `${numeroFormatado} - `, 
-      material: '', 
-      cor: '',
-      altura: '',
-      largura: '', 
-      areaQuantidade: '', 
-      valorPago: '', 
-      valorUnitario: '',
-      quantidadeEstoque: '', 
-      observacoes: '',
-      data_compra: '',
-      loja: ''
-    });
-    setIsModalAberto(true);
-  };
-
-  const handleFecharModal = () => {
-    setIsModalAberto(false);
-    setItemSendoEditado(null);
-    setNovoItem({
-      categoria: '', descricao: '', material: '', cor: '', altura: '',
-      largura: '', areaQuantidade: '', valorPago: '', valorUnitario: '',
-      quantidadeEstoque: '', observacoes: '', data_compra: '', loja: ''
-    });
-  };
-
-  const tratarNumero = (valor) => {
-    if (!valor) return null;
-    const formatado = parseFloat(String(valor).replace(',', '.'));
-    return isNaN(formatado) ? null : formatado;
-  };
-
-  // 3. SALVAR / ATUALIZAR DIRETAMENTE NO SUPABASE
-  const handleSalvarItem = async (e) => {
+  // Salva no banco de dados Supabase
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!novoItem.descricao || novoItem.descricao.trim() === "") {
-      return alert("Por favor, preencha a descrição!");
-    }
-    
-    const qtdEstoqueFinal = novoItem.quantidadeEstoque || novoItem.areaQuantidade;
-
-    // Criando o mapeamento exato com as colunas do Supabase
-    const dadosParaO_Banco = {
-      categoria: novoItem.categoria || 'Outros',
-      descricao: novoItem.descricao,
-      material: novoItem.material || null,
-      altura: tratarNumero(novoItem.altura) || 0,
-      largura: tratarNumero(novoItem.largura) || 0,
-      area: tratarNumero(novoItem.areaQuantidade) || 0,
-      pago: tratarNumero(novoItem.valorPago) || 0,
-      valorm: tratarNumero(novoItem.valorUnitario) || 0,
-      qtdestoque: tratarNumero(qtdEstoqueFinal) || 0,
-      observacao: novoItem.observacoes || '',
-      data_compra: novoItem.data_compra || null, // Se estiver vazio, salva como nulo
-      loja: novoItem.loja || null
+    setLoading(true);
+  
+    const pagoNum = formData.pago ? parseFloat(String(formData.pago).replace(',', '.')) : null;
+    const areaNum = formData.area ? parseFloat(String(formData.area).replace(',', '.')) : null;
+    const valormNum = formData.valorm ? parseFloat(String(formData.valorm).replace(',', '.')) : null;
+  
+    const itemParaSalvar = {
+      ...formData,
+      altura: formData.altura ? parseFloat(String(formData.altura).replace(',', '.')) : null,
+      largura: formData.largura ? parseFloat(String(formData.largura).replace(',', '.')) : null,
+      area: areaNum,
+      pago: pagoNum,
+      valorm: valormNum, // <--- Enviando a coluna valorm já calculada
+      material: formData.material === 'Outros' ? outroMaterial : formData.material,
+      data_compra: formData.data_compra || null
     };
-
-    try {
-      if (itemSendoEditado) {
-        // Modo Edição (UPDATE)
-        const { error } = await supabase
-          .from('estoque')
-          .update(dadosParaO_Banco)
-          .eq('id', itemSendoEditado.id);
-
-        if (error) throw error;
-      } else {
-        // Modo Cadastro (INSERT)
-        const { error } = await supabase
-          .from('estoque')
-          .insert([dadosParaO_Banco]);
-
-        if (error) throw error;
-      }
-
-      // Recarrega a lista e fecha o modal
-      buscarEstoque();
-      handleFecharModal();
-      alert('Item salvo com sucesso!');
-    } catch (error) {
-      console.error('Erro detalhado do Supabase:', error);
-      alert(`Erro ao salvar no banco: ${error.message || error.details}`);
+  
+    const { data, error } = await supabase
+      .from('estoque')
+      .insert([itemParaSalvar]);
+  
+    if (error) {
+      alert('Erro ao salvar item: ' + error.message);
+    } else {
+      alert('Item cadastrado com sucesso!');
+      setFormData({
+        categoria: '',
+        material: '',
+        cor: '',
+        estampa: '',
+        descricao: '',
+        altura: '',
+        largura: '',
+        area: '',
+        valorm: '',
+        pago: '',
+        data_compra: '',
+        loja: '',
+        observacao: ''
+      });
+      setOutroMaterial('');
+      fetchEstoque();
     }
+    setLoading(false);
   };
 
-  const temMedidas = novoItem.altura && novoItem.largura;
-  const temPrecoEArea = novoItem.valorPago && novoItem.areaQuantidade;
-
-  // Função auxiliar para formatar a data na exibição da tabela (DD/MM/AAAA)
-  const formatarData = (dataString) => {
-    if (!dataString) return '-';
+  // Função para converter "YYYY-MM-DD" para "DD/MM/YYYY"
+  function formatarData(dataString) {
+    if (!dataString) return '';
     const [ano, mes, dia] = dataString.split('-');
     return `${dia}/${mes}/${ano}`;
-  };
+  }
 
-  // DEFINIÇÃO EXATA DA LARGURA DAS 14 COLUNAS DA SUA TABELA
-  const estiloGridDasColunas = {
-    display: 'grid',
-    gridTemplateColumns: '45px 110px minmax(180px, 1fr) 100px 70px 70px 85px 95px 95px 105px 105px 90px 150px 60px',
-    gap: '10px',
-    alignItems: 'center'
-  };
+  // Verifica se o campo de área deve ficar bloqueado (readOnly)
+  const altNum = parseFloat(String(formData.altura).replace(',', '.'));
+  const largNum = parseFloat(String(formData.largura).replace(',', '.'));
+
+  const temDimensoesCalculaveis = 
+    formData.altura !== '' && 
+    formData.largura !== '' && 
+    !isNaN(altNum) && 
+    !isNaN(largNum);
 
   return (
-    <div className="estoque-container">
-      <header className="estoque-header">
-        <div className="header-titulo">
-          <Package size={24} color="#1E293B" />
-          <h1>Estoque ({estoque.length} itens)</h1>
-        </div>        
-        <button className="btn-abrir-cadastro" onClick={handleAbrirCadastro} title="Novo Item">
-          <Plus size={20} />
-        </button>
-      </header>
-
-      {isModalAberto && (
-        <div className="modal-overlay">
-          <div className="modal-content">
-            <div className="modal-header">
-              <h2>{itemSendoEditado ? `Atualizar Item Nº ${itemSendoEditado.id}` : "Cadastrar Novo Item"}</h2>
-              <button type="button" className="btn-fechar-modal" onClick={handleFecharModal}>
-                <X size={20} color="#64748B" />
-              </button>
-            </div>
-
-            <form onSubmit={handleSalvarItem}>
-              <div className="grid-formulario">
-                <div className="subsecao-form col-2">
-                  <div className="campo-input">
-                    <label>Categoria</label>
-                    <select name="categoria"                      
-                      value={novoItem.categoria} 
-                      onChange={handleInputChange}
-                      className="select-customizado"
-                    >
-                      <option value="">Selecione uma categoria...</option>                      
-                      <option value="Aviamento">Aviamentos</option>
-                      <option value="CustoF">Custos Fixos</option>
-                      <option value="Embalagem">Embalagem</option>
-                      <option value="Tecido">Tecido</option>
-                      <option value="Outros">Outros</option>                      
-                    </select>
-                  </div>
-                  
-                  <div className="linha-dupla">
-                    <div className="campo-input">
-                      <label>Material</label>
-                      <select name="material"                      
-                        value={novoItem.material} 
-                        onChange={handleInputChange}
-                        className="select-customizado"
-                      >
-                        <option value="">Selecione o material...</option>                      
-                        <option value="Fleece">Fleece</option>
-                        <option value="Jeans">Jeans</option>                      
-                        <option value="Matelasse">Matelassê</option> 
-                        <option value="Microsoft">Microsoft</option>  
-                        <option value="Moletom">Moletom</option>
-                        <option value="NylonE">Nylon Emborrachado</option> 
-                        <option value="Nylon7">Nylon 70</option>   
-                        <option value="Pele">Pele</option>                                                                                                                                                                                                            
-                        <option value="Ribana">Ribana</option>                      
-                        <option value="Soft">Soft</option>                                                                                                                                                                                                            
-                        <option value="TricolineE">Tricoline Estampado</option>                      
-                        <option value="TricolineF">Tricoline Festivo</option>             
-                        <option value="TricolineL">Tricoline Liso</option>                                                                                                                                                                                                                                                                                                  
-                      </select>
-                    </div>
-                    <div className="campo-input">
-                      <label>Cor</label>
-                      <input type="text" name="cor" value={novoItem.cor} onChange={handleInputChange} placeholder="Ex: Azul bebê" />                    
-                    </div>
-                  </div>
-                  
-                  <div className="campo-input">
-                    <label>Descrição</label>
-                    <input type="text" name="descricao" value={novoItem.descricao} onChange={handleInputChange} placeholder="Ex: S01 - Soft Rosa" />
-                  </div>
-
-                  <div className="linha-dupla">
-                    <div className="campo-input">
-                      <label>Data da Compra</label>
-                      <input type="date" name="data_compra" value={novoItem.data_compra} onChange={handleInputChange} />
-                    </div>
-                    <div className="campo-input">
-                      <label>Loja / Fornecedor</label>
-                      <input type="text" name="loja" value={novoItem.loja} onChange={handleInputChange} placeholder="Ex: Tecidos Online" />
-                    </div>
-                  </div>
-                </div>
-
-                <div className="subsecao-form col-2">
-                  <div className="linha-dupla">
-                    <div className="campo-input">
-                      <label>Altura (m)</label>
-                      <input type="text" name="altura" value={novoItem.altura} onChange={handleInputChange} placeholder="1,00" />
-                    </div>
-                    <div className="campo-input">
-                      <label>Largura (m)</label>
-                      <input type="text" name="largura" value={novoItem.largura} onChange={handleInputChange} placeholder="1,60" />
-                    </div>
-                  </div>
-
-                  <div className="linha-dupla">
-                    <div className="campo-input">
-                      <label>Área / Quantidade {temMedidas && <span style={{color: '#2563EB', fontWeight: 'bold'}}>(Auto)</span>}</label>
-                      <input 
-                        type="text" 
-                        name="areaQuantidade" 
-                        value={novoItem.areaQuantidade} 
-                        onChange={handleInputChange} 
-                        disabled={!!temMedidas}
-                        style={temMedidas ? { backgroundColor: '#EFF6FF', color: '#1E40AF', borderColor: '#DBEAFE', cursor: 'not-allowed' } : {}}
-                      />
-                    </div>
-                    <div className="campo-input">
-                      <label>Valor Pago (R$)</label>
-                      <input type="text" name="valorPago" value={novoItem.valorPago} onChange={handleInputChange} placeholder="11,90" />
-                    </div>
-                  </div>
-
-                  <div className="linha-dupla">
-                    <div className="campo-input">
-                      <label>Valor/m² {temPrecoEArea && <span style={{color: '#2563EB', fontWeight: 'bold'}}>(Auto)</span>}</label>
-                      <input 
-                        type="text" 
-                        name="valorUnitario" 
-                        value={novoItem.valorUnitario} 
-                        onChange={handleInputChange} 
-                        disabled={!!temPrecoEArea}
-                        style={temPrecoEArea ? { backgroundColor: '#EFF6FF', color: '#1E40AF', borderColor: '#DBEAFE', cursor: 'not-allowed' } : {}}
-                      />
-                    </div>
-                    <div className="campo-input">
-                      <label>Estoque</label>
-                      <input type="text" name="quantidadeEstoque" value={novoItem.quantidadeEstoque} onChange={handleInputChange} placeholder="Vazio usa a Área" />
-                    </div>
-                  </div>
-
-                  <div className="campo-input">
-                    <label>Observações</label>
-                    <input type="text" name="observacoes" value={novoItem.observacoes} onChange={handleInputChange} placeholder="Notes..." />
-                  </div>
-                </div>
-              </div>
-
-              <div className="modal-footer">
-                <button type="button" className="btn-cancelar" onClick={handleFecharModal}>
-                  Cancelar
-                </button>
-                <button type="submit" className="btn-salvar">
-                  {itemSendoEditado ? "Atualizar" : "Salvar"}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      <div className="overflow-lista">
-        <div className="lista-estoque" style={{ minWidth: '1200px' }}>
-          
-          {/* APLICADO O TRATAMENTO DE ALINHAMENTO NO HEADER */}
-          <div className="lista-header" style={estiloGridDasColunas}>
-            <div>ID</div>
-            <div>Categoria</div>
-            <div>Descrição</div>
-            <div>Material</div>            
-            <div>Altura</div>
-            <div>Largura</div>
-            <div>Área/Qtd</div>
-            <div>Valor Pago</div>
-            <div>Valor/m²</div>
-            <div>Qtd Estoque</div>
-            <div>Data compra</div>
-            <div>Loja</div>
-            <div>Observações</div>
-            <div style={{ textAlign: 'center' }}>Ações</div>
-          </div>
-
-          {loading ? (
-            <div style={{ padding: '20px', textAlign: 'center', color: '#64748B' }}>Carregando dados da nuvem...</div>
-          ) : estoque.length === 0 ? (
-            <div style={{ padding: '20px', textAlign: 'center', color: '#64748B' }}>Nenhum item cadastrado no estoque.</div>
-          ) : (
-            estoque.map((item) => (
-              
-              /* APLICADO O TRATAMENTO DE ALINHAMENTO NAS LINHAS */
-              <div className="lista-item" key={item.id} style={estiloGridDasColunas}>
-                <div style={{ fontWeight: 'bold', color: '#1E293B' }}>{item.id}</div>
-                <div><span className="item-categoria">{item.categoria || 'Geral'}</span></div>
-                <div className="item-descricao" style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{item.descricao}</div>
-                <div>{item.material || '-'}</div>
-                <div>{item.altura !== null ? String(item.altura).replace('.', ',') : '-'}</div>
-                <div>{item.largura !== null ? String(item.largura).replace('.', ',') : '-'}</div>
-                <div>{item.area !== null ? String(item.area).replace('.', ',') : '-'}</div>
-                <div>{item.pago !== null ? `R$ ${String(item.pago).replace('.', ',')}` : '-'}</div>
-                <div>{item.valorm !== null ? `R$ ${String(item.valorm).replace('.', ',')}` : '-'}</div>
-                <div>{item.qtdestoque !== null ? String(item.qtdestoque).replace('.', ',') : '-'}</div>
-                <div>{formatarData(item.data_compra)}</div>
-                <div>{item.loja || '-'}</div>
-                <div style={{ color: '#64748b', fontSize: '13px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{item.observacao || '-'}</div>
-                
-                <div style={{ display: 'flex', justifyContent: 'center' }}>
-                  <button 
-                    onClick={() => handlePrepararEdicao(item)} 
-                    className="btn-editar" 
-                    title="Editar Item" 
-                  >
-                    <Pencil size={16} />
-                  </button>
-                </div>
-              </div>
-            ))
-          )}
-        </div>
+    <div style={{ padding: '20px', fontFamily: 'sans-serif', maxWidth: '1200px', margin: '0 auto' }}>
+      <h2>Controle de Estoque</h2>
+      <div style={{ padding: '20px', fontFamily: 'sans-serif', maxWidth: '1200px', margin: '0 auto' }}>
+        <h3>Adicionar Novo Item</h3>
       </div>
+      
+      {/* --- FORMULÁRIO DE CADASTRO --- */}
+      <form onSubmit={handleSubmit} style={{ background: '#f5f5f5', padding: '20px', borderRadius: '8px', marginBottom: '30px' }}>        
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '15px' }}>
+          
+          <div>
+            <label>Categoria:</label>
+            <select 
+              name="categoria"
+              value={formData.categoria}
+              onChange={handleChange}
+              className="select-customizado"
+            >
+              <option value="">Selecione uma categoria...</option>
+              <option value="Aviamento">Aviamentos</option>
+              <option value="Custos Fixos">Custos Fixos</option>
+              <option value="Embalagem">Embalagem</option>
+              <option value="Tecido">Tecido</option>
+              <option value="Outros">Outros</option>
+            </select>
+          </div>
+
+          <div>
+            <label>Material:</label>            
+            <select name="material"                      
+              value={formData.material} 
+              onChange={handleChange}
+              className="select-customizado"
+            >
+              <option value="">Selecione o material...</option>                      
+              <option value="Fleece">Fleece</option>
+              <option value="Gorgurinho">Gorgurinho</option>
+              <option value="Jeans">Jeans</option>          
+              <option value="Malha">Malha</option>                                    
+              <option value="Matelasse">Matelassê</option> 
+              <option value="Microsoft">Microsoft</option>  
+              <option value="Moletom">Moletom</option>
+              <option value="NylonE">Nylon Emborrachado</option> 
+              <option value="Nylon7">Nylon 70</option>   
+              <option value="Pele">Pele</option>                                                                                                                                                                                                                                                                                
+              <option value="Pipoquinha">Pipoquinha</option>     
+              <option value="Poliviscose">Poliviscose</option>  
+              <option value="Ribana">Ribana</option>                      
+              <option value="Soft">Soft</option>                                                                                                                                                                                                                                                                                
+              <option value="TricolineE">Tricoline Estampado</option>                      
+              <option value="TricolineF">Tricoline Festivo</option>             
+              <option value="TricolineL">Tricoline Liso</option>                                                                                                                                                                                                                                                                                
+              <option value="Outros">Outros</option>  
+            </select>    
+
+            {formData.material === 'Outros' && (
+              <input
+                type="text"
+                placeholder="Digite o nome do material..."
+                value={outroMaterial}
+                onChange={(e) => setOutroMaterial(e.target.value)}
+                className="input-customizado" 
+                style={inputStyle} 
+                required
+              />
+            )}        
+          </div>
+
+          <div>
+            <label>Cor:</label>
+            <select name="cor"                      
+              value={formData.cor} 
+              onChange={handleChange}
+              className="select-customizado"
+            >
+              <option value="">Selecione a cor ...</option>                      
+              <option value="Azul">Azul</option>
+              <option value="AzulB">Azul bebê</option>
+              <option value="AzulM">Azul Marinho</option>
+              <option value="AzulR">Azul Royal</option>
+              <option value="Amarelo">Amarelo</option>
+              <option value="Bege">Bege</option>          
+              <option value="Branco">Branco</option>                                    
+              <option value="Caramelo">Caramelo</option> 
+              <option value="Cinza">Cinza</option>  
+              <option value="Laranja">Laranja</option>  
+              <option value="Pink">Pink</option>     
+              <option value="Preto">Preto</option>
+              <option value="Rosa">Rosa</option>  
+              <option value="RosaC">Rosa Claro</option>                                                                                                                                                                                                                                                                                
+              <option value="Verde">Verde</option>
+              <option value="VerdeA">Verde Água</option> 
+              <option value="VerdeM">Verde Musgo</option>   
+              <option value="Vermelho">Vermelho</option>                                                                                                                                                                                                                                                                                
+              <option value="Vinho">Vinho</option>             
+            </select>                        
+          </div>
+
+          <div>
+            <label>Estampa:</label>
+            <input type="text" name="estampa" value={formData.estampa} onChange={handleChange} style={inputStyle} />
+          </div>
+
+          <div>
+            <label>Descrição:</label>
+            <input type="text" name="descricao" value={formData.descricao} onChange={handleChange} style={inputStyle} readOnly/>
+          </div>
+
+          <div>
+            <label>Altura:</label>
+            <input type="text" name="altura" value={formData.altura} onChange={handleChange} style={inputStyle} />
+          </div>
+
+          <div>
+            <label>Largura:</label>
+            <input type="text" name="largura" value={formData.largura} onChange={handleChange} style={inputStyle} />
+          </div>
+
+          <div>
+            <label>Área / Quantidade:</label>
+            <input 
+              type="text" 
+              name="area" 
+              value={formData.area} 
+              onChange={handleChange} 
+              style={inputStyle}
+              readOnly={temDimensoesCalculaveis}
+            />
+          </div>
+
+          <div>
+            <label>Valor Pago (R$):</label>
+            <input type="text" name="pago" value={formData.pago} onChange={handleChange} style={inputStyle} />
+          </div>
+
+          <div>
+            <label>Valor / $m^2$ (R$):</label>
+            <input 
+              type="text" 
+              name="valorm" 
+              value={formData.valorm} 
+              style={inputStyle} 
+              readOnly 
+              placeholder="Calculado autom."
+            />
+          </div>
+
+          <div>
+            <label>Data da Compra:</label>
+            <input type="date" name="data_compra" value={formData.data_compra} onChange={handleChange} style={inputStyle} />
+          </div>
+
+          <div>
+            <label>Loja:</label>
+            <input type="text" name="loja" value={formData.loja} onChange={handleChange} style={inputStyle} />
+          </div>
+
+          <div style={{ gridColumn: 'span 2' }}>
+            <label>Observações:</label>
+            <input type="text" name="observacao" value={formData.observacao} onChange={handleChange} style={inputStyle} />
+          </div>
+
+        </div>
+
+        <button 
+          type="submit" 
+          disabled={loading}
+          style={{ marginTop: '20px', padding: '10px 20px', backgroundColor: '#0070f3', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
+        >
+          {loading ? 'Salvação em andamento...' : 'Salvar no Estoque'}
+        </button>
+      </form>
+
+      {/* --- TABELA DE EXIBIÇÃO DO ESTOQUE --- */}            
+      <h3 className="estoque-title" style={{ fontSize: '20px' }}>Itens no Estoque</h3>
+
+      <div className="tabela-div">
+        {/* CABEÇALHO */}
+        <div className="tabela-linha tabela-header">
+          <div className="col-cat">Categoria</div>
+          <div className="col-mat">Material</div>
+          <div className="col-cor">Cor</div>
+          <div className="col-est">Estampa</div>
+          <div className="col-desc">Descrição</div>
+          <div className="col-dim">Altura</div>
+          <div className="col-dim">Largura</div>
+          <div className="col-qtd">Área/Qtd</div>
+          <div className="col-val">Valor Pago</div>
+          <div className="col-data">Data Compra</div>
+          <div className="col-loja">Loja</div>
+          <div className="col-obs">Obs</div>
+        </div>
+
+        {/* CORPO DOS DADOS */}
+        {itens.length === 0 ? (
+          <div className="tabela-vazia">
+            {loading ? 'Carregando itens...' : 'Nenhum item cadastrado.'}
+          </div>
+        ) : (
+          itens.map((item) => (
+            <div key={item.id} className="tabela-linha">
+              <div className="col-cat">{item.categoria || '-'}</div>
+              <div className="col-mat">{item.material || '-'}</div>
+              <div className="col-cor">{item.cor || '-'}</div>
+              <div className="col-est">{item.estampa || '-'}</div>
+              <div className="col-desc"><strong>{item.descricao || '-'}</strong></div>
+              <div className="col-dim">{item.altura || '-'}</div>
+              <div className="col-dim">{item.largura || '-'}</div>
+              <div className="col-qtd">{item.area || '-'}</div>
+              <div className="col-val">{item.pago ? `R$ ${item.pago}` : '-'}</div>
+              <div className="col-val">{item.valorm ? `R$ ${item.valorm}` : '-'}</div>
+              <div className="col-data">{formatarData(item.data_compra)}</div>
+              <div className="col-loja">{item.loja || '-'}</div>
+              <div className="col-obs">{item.observacao || '-'}</div>
+            </div>
+          ))
+        )}
+      </div>
+            
     </div>
   );
 }
+
+// Estilos básicos inline para visualização rápida
+const inputStyle = {
+  width: '100%',
+  padding: '8px',
+  marginTop: '4px',
+  borderRadius: '4px',
+  border: '1px solid #ccc',
+  boxSizing: 'border-box'
+};
