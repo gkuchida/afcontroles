@@ -74,7 +74,6 @@ export default function Producao() {
     } else {
       setPetsFiltrados(todosPets);
     }
-    // Reseta a seleção do pet se trocar o cliente
     setFormData((prev) => ({ ...prev, pet_id: '' }));
   }, [formData.cliente_id, todosPets]);
 
@@ -236,7 +235,7 @@ export default function Producao() {
     setMateriaisUsados(novos);
   };
 
-  // 2. SALVAR PRODUÇÃO
+  // 2. SALVAR PRODUÇÃO E GERAR VENDA
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
@@ -314,16 +313,16 @@ export default function Producao() {
       if (prodError) throw prodError;      
 
       // --- 5. GRAVA MATERIAIS ---      
-        const materiaisPayload = materiaisUsados
+      const materiaisPayload = materiaisUsados
         .filter((m) => m.material_id && String(m.material_id).trim() !== '' && m.material_id !== 'Outros')
         .map((m) => ({
-        produto_id: prodData.id,
-        material_id: m.material_id,
-        altura: parseNum(m.altura) || null,
-        largura: parseNum(m.largura) || null,
-        quantidade: parseNum(m.quantidade) || null,
-        valor_gasto: parseNum(m.valor_gasto) || 0,
-        observacao: m.observacao?.trim() || null
+          produto_id: prodData.id,
+          material_id: m.material_id,
+          altura: parseNum(m.altura) || null,
+          largura: parseNum(m.largura) || null,
+          quantidade: parseNum(m.quantidade) || null,
+          valor_gasto: parseNum(m.valor_gasto) || 0,
+          observacao: m.observacao?.trim() || null
         }));
 
       if (materiaisPayload.length > 0) {
@@ -332,6 +331,31 @@ export default function Producao() {
           .insert(materiaisPayload);
 
         if (matError) throw matError;
+      }
+
+      // --- 6. GRAVA VENDA AUTOMÁTICA SE FOR PARA CLIENTE (ENCOMENDA) ---
+      if (finalClienteId) {
+        const valorVendaNum = parseNum(formData.vender_por);
+        const custoTotalNum = parseNum(formData.custo);
+
+        const payloadVenda = {
+          data_venda: new Date().toISOString().split('T')[0],
+          cliente_id: finalClienteId,
+          pet_id: finalPetId,
+          produto_id: prodData.id,
+          quantidade: 1,
+          caracteristicas: `${formData.tecido || 'Encomenda'}`,
+          valor_unitario: valorVendaNum,
+          valor_total: valorVendaNum,
+          custo_venda: custoTotalNum,
+          lucro_venda: valorVendaNum - custoTotalNum,
+          forma_pagamento: 'A definir',
+          canal_venda: 'WhatsApp',
+          observacao: 'Gerado via Produção (Encomenda)'
+        };
+
+        const { error: errVenda } = await supabase.from('vendas').insert([payloadVenda]);
+        if (errVenda) console.error('Erro ao gerar registro automático de venda:', errVenda);
       }
 
       alert('Produção registrada com sucesso!');
@@ -554,6 +578,7 @@ export default function Producao() {
               value={formData.comprimento}
               onChange={handleChangeForm}
               className="input-customizado"
+              style={{ backgroundColor: '#fff', bordercolor: 'var(--primary-hover)' }}
               placeholder="Ex: 35"
             />
           </div>
@@ -563,7 +588,7 @@ export default function Producao() {
         <h4 style={{ marginTop: '20px' }}>Materiais Gastos na Peça</h4>
 
         {materiaisUsados.map((mat, idx) => (
-          <div key={idx} className="form-grid" style={{ background: '#fdf6f3', padding: '10px', borderRadius: '8px', marginBottom: '10px' }}>
+          <div key={idx} className="form-grid">
             <div className="form-group">
               <label>Material:</label>
               <select
@@ -643,7 +668,7 @@ export default function Producao() {
           </div>
         ))}
 
-        <button type="button" onClick={adicionarLinhaMaterial} className="btn-submit" style={{ backgroundColor: '#786f6c', marginBottom: '20px' }}>
+        <button type="button" onClick={adicionarLinhaMaterial} className="btn-submit">
           + Adicionar Outro Material
         </button>
 
@@ -771,20 +796,11 @@ export default function Producao() {
 
                       <td style={{ padding: '0', border: '1px solid #ddd', minWidth: '150px' }}>
                         {listaMats.length > 0 ? (
-                          listaMats.map((m, idx) => {
-                            const matEstoque = materiais.find(item => String(item.id) === String(m.material_id));
-                            return (
-                                <td style={{ padding: '0', border: '1px solid #ddd', minWidth: '150px' }}>
-                                {listaMats.length > 0 ? (
-                                  listaMats.map((m, idx) => (
-                                    <div key={m.id || idx} style={{ padding: '4px 8px', borderBottom: idx < listaMats.length - 1 ? '1px solid #eee' : 'none' }}>
-                                      {m.estoque?.descricao || m.material_id || '-'}
-                                    </div>
-                                  ))
-                                ) : '-'}
-                              </td>
-                            );
-                          })
+                          listaMats.map((m, idx) => (
+                            <div key={m.id || idx} style={{ padding: '4px 8px', borderBottom: idx < listaMats.length - 1 ? '1px solid #eee' : 'none' }}>
+                              {m.estoque?.descricao || m.material_id || '-'}
+                            </div>
+                          ))
                         ) : '-'}
                       </td>
 

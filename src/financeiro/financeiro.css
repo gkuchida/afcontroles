@@ -1,178 +1,300 @@
+/* Reset de Box Model para evitar transbordamento de telas */
+.financeiro-container,
+.financeiro-container * {
+  box-sizing: border-box;
+}
+
 .financeiro-container {
-    padding: 20px;
-  }
-  
-  .financeiro-header {
-    margin-bottom: 25px;
-  }
-  
-  /* Grid superior para os anos */
-  .financeiro-grid-anos {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-    gap: 20px;
-    margin-bottom: 25px;
-  }
-  
-  .card-ano-financeiro {
-    background: white;
-    border-radius: 10px;
-    padding: 16px;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
-    border-top: 4px solid #4f46e5;
-  }
-  
-  .card-ano-financeiro h3 {
-    margin: 0 0 12px 0;
-    color: #1e293b;
-    font-size: 1.1rem;
-  }
-  
-  .ano-row {
-    display: flex;
-    justify-content: space-between;
-    margin-bottom: 8px;
-    font-size: 0.95rem;
-  }
-  
-  .cor-vendas { color: #2563eb; font-weight: 600; }
-  .cor-lucro { color: #16a34a; font-weight: 600; }
-  
-  /* Organização Inferior: Form de um lado, tabela do outro */
-  .financeiro-secao-compras {
-    display: grid;
-    grid-template-columns: 1fr 2fr;
-    gap: 24px;
-    margin-top: 30px;
-  }
-  
-  @media (max-width: 900px) {
-    .financeiro-secao-compras { grid-template-columns: 1fr; }
-  }
-  
-  .form-investimento-box, .tabela-investimentos-box {
-    background: white;
-    padding: 20px;
-    border-radius: 12px;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
-  }
-  
-  .form-investimento-box h3, .tabela-investimentos-box h3 {
-    margin-top: 0;
-    margin-bottom: 20px;
-    display: flex;
-    align-items: center;
-    color: #334155;
-  }
-  
-  /* Elementos do Formulário */
-  .form-financeiro {
-    display: flex;
-    flex-direction: column;
-    gap: 14px;
-  }
-  
-  .form-group {
-    display: flex;
-    flex-direction: column;
-    gap: 5px;
-  }
-  
-  .form-group label {
-    font-size: 0.85rem;
-    font-weight: 600;
-    color: #475569;
-  }
-  
-  .form-group input, .form-group select, .form-group textarea {
-    padding: 10px;
-    border: 1px solid #cbd5e1;
-    border-radius: 6px;
-    font-size: 0.9rem;
+  padding: 16px;
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+  overflow-x: hidden;
+}
+
+/* Header com recuo para menu em telas pequenas */
+.financeiro-header {
+  margin-bottom: 20px;
+  padding-left: 50px; /* Garante que o menu hambúrguer fixo não cubra o texto */
+}
+
+.financeiro-header h1 {
+  font-size: 1.5rem;
+  color: #1e293b;
+  margin: 0 0 6px 0;
+}
+
+.financeiro-header p {
+  color: #64748b;
+  font-size: 0.9rem;
+  margin: 0;
+}
+
+/* ==========================================================================
+   Tabela de Comparativo Anual
+   ========================================================================== */
+.financeiro-tabela-anos-box {
+  background: white;
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 20px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  border: 1px solid #e2e8f0;
+}
+
+.financeiro-tabela-anos-box h3 {
+  margin-top: 0;
+  margin-bottom: 15px;
+  color: #1e293b;
+  font-size: 1rem;
+}
+
+.tabela-wrapper {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.tabela-financeira-anos {
+  width: 100%;
+  min-width: 400px;
+  border-collapse: collapse;
+  text-align: left;
+}
+
+.tabela-financeira-anos th {
+  background-color: #f8fafc;
+  color: #475569;
+  padding: 10px 12px;
+  font-weight: 600;
+  font-size: 0.85rem;
+  border-bottom: 2px solid #e2e8f0;
+}
+
+.tabela-financeira-anos td {
+  padding: 12px;
+  border-bottom: 1px solid #f1f5f9;
+  font-size: 0.9rem;
+}
+
+.ano-coluna {
+  font-weight: 700;
+  color: #1e293b;
+}
+
+.cor-vendas { color: #2563eb; font-weight: 600; }
+.cor-lucro { color: #16a34a; font-weight: 600; }
+
+/* ==========================================================================
+   Dashboard Grid (Totais Consolidados)
+   ========================================================================== */
+.dashboard-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+}
+
+.dashboard-card {
+  background: white;
+  border-radius: 10px;
+  padding: 14px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.card-icon {
+  width: 42px;
+  height: 42px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.bg-laranja { background-color: #fef2f2; color: #dc2626; }
+.bg-azul { background-color: #eff6ff; color: #2563eb; }
+.bg-rosa { background-color: #f0fdf4; color: #16a34a; }
+
+.card-info h3 {
+  margin: 0;
+  font-size: 0.8rem;
+  color: #64748b;
+  font-weight: 500;
+}
+
+.card-info p {
+  margin: 4px 0 0 0;
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #1e293b;
+}
+
+/* ==========================================================================
+   Seção Inferior (Formulário e Histórico)
+   ========================================================================== */
+.financeiro-secao-compras {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  margin-top: 20px;
+}
+
+.form-investimento-box, 
+.tabela-investimentos-box {
+  background: white;
+  padding: 16px;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  width: 100%;
+}
+
+.form-investimento-box h3, 
+.tabela-investimentos-box h3 {
+  margin-top: 0;
+  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+  color: #334155;
+  font-size: 1rem;
+}
+
+/* Form Responsivo */
+.form-financeiro {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.form-group label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #475569;
+}
+
+.form-group input, 
+.form-group select, 
+.form-group textarea {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  outline: none;
+  background-color: #fff;
+}
+
+.form-group input:focus, 
+.form-group select:focus, 
+.form-group textarea:focus {
+  border-color: #4f46e5;
+  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+}
+
+.form-row-duplo {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.btn-salvar-financeiro {
+  background: #4f46e5;
+  color: white;
+  border: none;
+  padding: 12px;
+  border-radius: 6px;
+  font-weight: 600;
+  font-size: 0.9rem;
+  cursor: pointer;
+  margin-top: 6px;
+  transition: background 0.2s;
+  width: 100%;
+}
+
+.btn-salvar-financeiro:hover { background: #4338ca; }
+
+/* Tabela de Histórico com Scroll */
+.estoque-table-wrapper {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.estoque-table {
+  width: 100%;
+  min-width: 550px;
+  border-collapse: collapse;
+  text-align: left;
+  font-size: 0.85rem;
+}
+
+.estoque-table th {
+  background-color: #f8fafc;
+  color: #475569;
+  padding: 10px;
+  font-weight: 600;
+  border-bottom: 2px solid #e2e8f0;
+  white-space: nowrap;
+}
+
+.estoque-table td {
+  padding: 10px;
+  border-bottom: 1px solid #f1f5f9;
+  color: #334155;
+  white-space: nowrap;
+}
+
+.badge-tamanho {
+  background-color: #f1f5f9;
+  color: #475569;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 0.75rem;
+}
+
+.btn-deletar-linha {
+  background: none;
+  border: none;
+  color: #ef4444;
+  cursor: pointer;
+  padding: 6px;
+  border-radius: 4px;
+}
+
+.btn-deletar-linha:hover { background: #fee2e2; }
+
+/* ==========================================================================
+   Media Queries para Telas Maiores (Tablets e Desktops)
+   ========================================================================== */
+@media (min-width: 640px) {
+  .dashboard-grid {
+    grid-template-columns: repeat(3, 1fr);
   }
   
   .form-row-duplo {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 12px;
   }
-  
-  .btn-salvar-financeiro {
-    background: #4f46e5;
-    color: white;
-    border: none;
-    padding: 12px;
-    border-radius: 6px;
-    font-weight: 600;
-    cursor: pointer;
-    margin-top: 10px;
-    transition: background 0.2s;
-  }
-  
-  .btn-salvar-financeiro:hover { background: #4338ca; }
-  
-  .btn-deletar-linha {
-    background: none;
-    border: none;
-    color: #ef4444;
-    cursor: pointer;
-    padding: 4px;
-    border-radius: 4px;
-  }
-  
-  .btn-deletar-linha:hover { background: #fee2e2; }
+}
 
-  /* Container da tabela de anos */
-.financeiro-tabela-anos-box {
-    background: white;
-    border-radius: 12px;
-    padding: 20px;
-    margin-bottom: 25px;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+@media (min-width: 900px) {
+  .financeiro-header {
+    padding-left: 0; /* Restaura o alinhamento em telas grandes */
   }
-  
-  .financeiro-tabela-anos-box h3 {
-    margin-top: 0;
-    margin-bottom: 15px;
-    color: #1e293b;
-    font-size: 1.1rem;
+
+  .financeiro-secao-compras {
+    display: grid;
+    grid-template-columns: 360px 1fr;
+    align-items: start;
   }
-  
-  /* Estilização da tabela ano a ano */
-  .tabela-financeira-anos {
-    width: 100%;
-    border-collapse: collapse;
-    text-align: left;
-  }
-  
-  .tabela-financeira-anos th {
-    background-color: #f8fafc;
-    color: #475569;
-    padding: 12px 16px;
-    font-weight: 600;
-    border-bottom: 2px solid #e2e8f0;
-  }
-  
-  .tabela-financeira-anos td {
-    padding: 14px 16px;
-    border-bottom: 1px solid #f1f5f9;
-    font-size: 1rem;
-  }
-  
-  .tabela-financeira-anos tr:hover {
-    background-color: #f8fafc;
-  }
-  
-  .ano-coluna {
-    font-weight: 700;
-    color: #1e293b;
-  }
-  
-  /* Cores combinando com os dados da planilha */
-  .cor-vendas {
-    color: #2563eb; /* Azul para vendas */
-  }
-  
-  .cor-lucro {
-    color: #16a34a; /* Verde para lucro */
-  }
+}

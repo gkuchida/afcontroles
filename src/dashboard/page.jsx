@@ -12,57 +12,72 @@ export default function Dashboard() {
     tamanhoMaisVendido: 'Carregando...'
   });
 
-  // Novo estado para guardar a lista de produtos em estoque
   const [produtosEstoque, setProdutosEstoque] = useState([]);
   const [loadingEstoque, setLoadingEstoque] = useState(true);
 
   useEffect(() => {
-    async function carregarDadosDoSupabase() {
+    async function carregarDashboard() {
       try {
-        // --- 1. BUSCA DADOS DE VENDAS PARA OS CARDS MENORES ---
-        const { data: vendas, error: errorVendas } = await supabase
-          .from('vendas')
-          .select('data, produto, tamanho, quantidade');
+        setLoadingEstoque(true);
 
-        if (errorVendas) throw errorVendas;
+        // 1. BUSCA DADOS EM PARALELO NAS TABELAS
+        const [resVendas, resProdutos, resModelos, resTamanhos] = await Promise.all([
+          supabase.from('vendas').select('*'),
+          supabase.from('produtos').select('*'),
+          supabase.from('modelos').select('*'),
+          supabase.from('tamanhos').select('*')
+        ]);
 
-        if (vendas && vendas.length > 0) {
+        // Mapeamento rápido de IDs para Nomes
+        const mapaModelos = {};
+        (resModelos.data || []).forEach(m => { mapaModelos[m.id] = m.nome; });
+
+        const mapaTamanhos = {};
+        (resTamanhos.data || []).forEach(t => { mapaTamanhos[t.id] = t.nome; });
+
+        const mapaProdutos = {};
+        (resProdutos.data || []).forEach(p => { mapaProdutos[p.id] = p; });
+
+        // --- 2. PROCESSA MÉTRICAS DE VENDAS ---
+        const vendas = resVendas.data || [];
+        if (vendas.length > 0) {
           const agrupadoPorMes = {};
           const contagemModelos = {};
           const contagemTamanhos = {};
 
           vendas.forEach(venda => {
             const qtd = Number(venda.quantidade) || 1;
+            const dataVenda = venda.data_venda || venda.created_at;
+            
+            const prod = mapaProdutos[venda.produto_id];
+            const nomeModelo = prod ? mapaModelos[prod.modelo_id] || 'Outros' : 'Outros';
+            const nomeTamanho = prod ? mapaTamanhos[prod.tamanho_id] || '-' : '-';
 
-            if (venda.data) {
-              const dataObjeto = new Date(venda.data);
-              const mesAno = `${String(dataObjeto.getMonth() + 1).padStart(2, '0')}/${dataObjeto.getFullYear()}`;
-              agrupadoPorMes[mesAno] = (agrupadoPorMes[mesAno] || 0) + qtd;
+            if (dataVenda) {
+              const partesData = String(dataVenda).split('T')[0].split('-');
+              if (partesData.length >= 2) {
+                const mesAno = `${partesData[1]}/${partesData[0]}`;
+                agrupadoPorMes[mesAno] = (agrupadoPorMes[mesAno] || 0) + qtd;
+              }
             }
-            if (venda.produto) {
-              contagemModelos[venda.produto] = (contagemModelos[venda.produto] || 0) + qtd;
-            }
-            if (venda.tamanho) {
-              contagemTamanhos[venda.tamanho] = (contagemTamanhos[venda.tamanho] || 0) + qtd;
-            }
+
+            contagemModelos[nomeModelo] = (contagemModelos[nomeModelo] || 0) + qtd;
+            contagemTamanhos[nomeTamanho] = (contagemTamanhos[nomeTamanho] || 0) + qtd;
           });
 
-          let melhorMesAno = 'Sem dados';
-          let maxVendasMes = 0;
-          Object.entries(agrupadoPorMes).forEach(([mesAno, total]) => {
-            if (total > maxVendasMes) { maxVendasMes = total; melhorMesAno = mesAno; }
+          let melhorMesAno = 'Sem dados', maxVendasMes = 0;
+          Object.entries(agrupadoPorMes).forEach(([mes, total]) => {
+            if (total > maxVendasMes) { maxVendasMes = total; melhorMesAno = mes; }
           });
 
-          let modeloMaisVendido = 'Sem dados';
-          let maxModelo = 0;
-          Object.entries(contagemModelos).forEach(([modelo, total]) => {
-            if (total > maxModelo) { maxModelo = total; modeloMaisVendido = modelo; }
+          let modeloMaisVendido = 'Sem dados', maxModelo = 0;
+          Object.entries(contagemModelos).forEach(([mod, total]) => {
+            if (total > maxModelo) { maxModelo = total; modeloMaisVendido = mod; }
           });
 
-          let tamanhoMaisVendido = 'Sem dados';
-          let maxTamanho = 0;
-          Object.entries(contagemTamanhos).forEach(([tamanho, total]) => {
-            if (total > maxTamanho) { maxTamanho = total; tamanhoMaisVendido = tamanho; }
+          let tamanhoMaisVendido = 'Sem dados', maxTamanho = 0;
+          Object.entries(contagemTamanhos).forEach(([tam, total]) => {
+            if (total > maxTamanho) { maxTamanho = total; tamanhoMaisVendido = tam; }
           });
 
           setMetricas({
@@ -71,52 +86,47 @@ export default function Dashboard() {
             modeloMaisVendido,
             tamanhoMaisVendido
           });
+        } else {
+          setMetricas({
+            melhorMesAno: 'Nenhuma venda',
+            quantidadeVendas: 0,
+            modeloMaisVendido: 'Nenhum',
+            tamanhoMaisVendido: 'Nenhum'
+          });
         }
-      } catch (erro) {
-        console.error("Erro ao carregar métricas de vendas:", erro);
-      }
-    }
 
-    async function carregarEstoqueTabelas() {
-      try {
-        setLoadingEstoque(true);
-        // Lista das tabelas que contêm produtos
-        const tabelas = ['inverno', 'verao', 'meiaestacao', 'artesanato'];
-
-        // Faz o fetch em todas as tabelas em paralelo para melhor performance
-        const promises = tabelas.map(tabela =>
-          supabase
-            .from(tabela)
-            .select('estoque_qtd, tamanho, modelo, caracteristicas, vender_por')
-            .gte('estoque_qtd', 1) // Filtra direto no Supabase quem tem estoque >= 1
-        );
-
-        const resultados = await Promise.all(promises);
+        // --- 3. PROCESSA PRODUTOS FILTRANDO POR ESTOQUE = "SIM" ---
+        const produtos = resProdutos.data || [];
         
-        let todosProdutos = [];
-        resultados.forEach((res, index) => {
-          if (res.error) {
-            console.error(`Erro ao buscar da tabela ${tabelas[index]}:`, res.error);
-          } else if (res.data) {
-            // Adiciona a categoria/tabela de origem apenas para fins informativos se precisar
-            const produtosFormatados = res.data.map(p => ({ ...p, categoria: tabelas[index] }));
-            todosProdutos = [...todosProdutos, ...produtosFormatados];
-          }
+        const listaFormatada = produtos
+          .filter(item => {
+            const statusEstoque = String(item.estoque || '').trim().toLowerCase();
+            return statusEstoque === 'sim'; // Verifica se a coluna estoque é igual a "sim"
+          })
+          .map(item => ({
+            id: item.id,
+            modelo: mapaModelos[item.modelo_id] || 'Sem Modelo',
+            tamanho: mapaTamanhos[item.tamanho_id] || '-',
+            material: item.tecido || item.observacao || '-',
+            vendaSugerida: Number(item.valor_venda) || 0
+          }));
+
+        setProdutosEstoque(listaFormatada);
+
+      } catch (err) {
+        console.error("Erro geral no dashboard:", err);
+        setMetricas({
+          melhorMesAno: 'Erro no banco',
+          quantidadeVendas: 0,
+          modeloMaisVendido: 'Erro no banco',
+          tamanhoMaisVendido: 'Erro no banco'
         });
-
-        // Ordena por maior quantidade em estoque
-        todosProdutos.sort((a, b) => b.estoque_qtd - a.estoque_qtd);
-
-        setProdutosEstoque(todosProdutos);
-      } catch (error) {
-        console.error("Erro geral ao carregar estoque:", error);
       } finally {
         setLoadingEstoque(false);
       }
     }
 
-    carregarDadosDoSupabase();
-    carregarEstoqueTabelas();
+    carregarDashboard();
   }, []);
 
   return (
@@ -126,14 +136,14 @@ export default function Dashboard() {
       <div className="dashboard-welcome-box">
         <div className="welcome-text">
           <h1>Olá! Bem-vindo ao AF Sistemas</h1>
-          <p>O painel de controle do seu estoque está pronto para monitoramento.</p>
+          <p>O painel de controle da sua produção está pronto para monitoramento.</p>
         </div>
         <div className="welcome-icon-wrapper">
           <LayoutDashboard size={48} color="white" strokeWidth={1.5} />
         </div>
       </div>
 
-      {/* Cards de Métricas Menores */}
+      {/* Cards de Métricas */}
       <div className="dashboard-grid">
         <div className="dashboard-card">
           <div className="card-icon bg-azul"><Calendar size={22} /></div>
@@ -161,47 +171,43 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* NOVO CARD: Resumo de Produtos em Estoque (Largura Toda) */}
+      {/* Resumo de Produção em Estoque */}
       <div className="dashboard-full-card">
         <div className="full-card-header">
           <div className="card-icon bg-verde" style={{ backgroundColor: '#22c55e', color: 'white', padding: '8px', borderRadius: '8px', display: 'flex', alignItems: 'center' }}>
             <PackageCheck size={22} />
           </div>
           <div style={{ marginLeft: '12px' }}>
-            <h3 style={{ margin: 0, fontSize: '1.1rem', color: '#333' }}>Resumo de Produtos em Estoque</h3>
-            <p style={{ margin: 0, fontSize: '0.85rem', color: '#666' }}>Produtos disponíveis com quantidade igual ou maior que 1</p>
+            <h3 style={{ margin: 0, fontSize: '1.1rem', color: '#333' }}>Resumo de Peças em Estoque (Produção)</h3>
+            <p style={{ margin: 0, fontSize: '0.85rem', color: '#666' }}>Peças com estoque marcado como SIM</p>
           </div>
         </div>
 
         <div className="full-card-body">
           {loadingEstoque ? (
-            <p className="loading-text">Buscando estoque nas tabelas...</p>
+            <p className="loading-text">Buscando dados no Supabase...</p>
           ) : produtosEstoque.length === 0 ? (
-            <p className="empty-text">Nenhum produto com estoque disponível no momento.</p>
+            <p className="empty-text">Nenhuma peça com estoque marcado como "sim" no momento.</p>
           ) : (
+            /* A div abaixo controla o Scroll */
             <div className="estoque-table-wrapper">
               <table className="estoque-table">
                 <thead>
                   <tr>
-                    <th>Modelo</th>                    
-                    <th>Características</th>
+                    <th>Modelo</th>
                     <th>Tamanho</th>
-                    <th>Qtd Estoque</th>
-                    <th>Valor de Venda</th>
+                    <th>Material</th>
+                    <th>Venda Sugerida</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {produtosEstoque.map((produto, index) => (
-                    <tr key={index}>
-                      <td className="font-bold">{produto.modelo || '-'}</td>                      
-                      <td className="text-muted">{produto.caracteristicas || '-'}</td>
-                      <td><span className="badge-tamanho">{produto.tamanho || '-'}</span></td>
-                      <td className="font-bold estoque-qtd">{produto.estoque_qtd} un</td>
+                  {produtosEstoque.map((item) => (
+                    <tr key={item.id}>
+                      <td className="font-bold">{item.modelo}</td>
+                      <td><span className="badge-tamanho">{item.tamanho}</span></td>
+                      <td className="text-muted">{item.material}</td>
                       <td className="valor-venda">
-                        {produto.vender_por 
-                          ? Number(produto.vender_por).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
-                          : 'R$ 0,00'
-                        }
+                        {item.vendaSugerida.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
                       </td>
                     </tr>
                   ))}

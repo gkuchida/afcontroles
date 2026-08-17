@@ -1,16 +1,49 @@
 /* =========================================================
-   ESTILOS ESPECÍFICOS PARA A FICHA DE PRODUÇÃO
+   ESTILOS BASE & VARIÁVEIS
    ========================================================= */
-
-/* Grid do Formulário de Produção (4 colunas em telas grandes) */
-.form-grid {
+   :root {
+    --primary-color: #0056b3;
+    --primary-hover: #004085;
+    --text-main: #333333;
+    --border-color: #cccccc;
+    --bg-card: #ffffff;
+    --radius: 6px;
+  }
+  
+  .estoque-container {
+    width: 100%;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 16px;
+    box-sizing: border-box;
+  }
+  
+  .estoque-title {
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--text-main);
+    margin-bottom: 20px;
+  }
+  
+  .estoque-card {
+    background-color: var(--bg-card);
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    margin-bottom: 20px;
+  }
+  
+  /* =========================================================
+     GRID & FORMULÁRIOS
+     ========================================================= */
+  .form-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
     gap: 12px;
     margin-bottom: 15px;
+    align-items: flex-end;
   }
   
-  /* Container do grupo de input/label */
   .form-group {
     display: flex;
     flex-direction: column;
@@ -23,8 +56,8 @@
     margin-bottom: 4px;
   }
   
-  /* Inputs padronizados para o formulário de produção */
-  .input-customizado {
+  .input-customizado,
+  .select-customizado {
     width: 100%;
     padding: 8px 12px;
     font-size: 13.5px;
@@ -37,74 +70,89 @@
     transition: border-color 0.2s ease;
   }
   
-  .input-customizado:focus {
-    border-color: var(--primary-hover);
+  .input-customizado:focus,
+  .select-customizado:focus {
+    border-color: var(--primary-color);
   }
   
-  .input-customizado[readonly] {
-    background-color: #f2ede8;
-    color: var(--text-muted);
-    cursor: not-allowed;
-  }
-  
-  /* Estilização para o botão de adicionar mais um material */
   .btn-submit {
-    padding: 10px 16px;
-    font-weight: 600;
-    font-size: 13.5px;
-    color: #ffffff;
+    width: 100%;
+    padding: 12px;
+    background-color: var(--primary-color);
+    color: #fff;
     border: none;
     border-radius: var(--radius);
+    font-size: 14px;
+    font-weight: 600;
     cursor: pointer;
-    transition: opacity 0.2s ease;
+    transition: background-color 0.2s;
   }
   
   .btn-submit:hover {
-    opacity: 0.9;
+    background-color: var(--primary-hover);
   }
   
-  /* Destaque para a linha de Totais (Custo, Venda e Vender Por) */
-  .form-grid .form-group:last-child .input-customizado {
-    background-color: #fcf0ea;
-    border-color: var(--primary-hover);
-    font-size: 15px;
+  .btn-submit:disabled {
+    background-color: #ccc;
+    cursor: not-allowed;
   }
-
-  /* Container que envolve a tabela */
-.historico-table-container {
+  
+  /* =========================================================
+     HISTÓRICO & TABELA RESPONSIVA
+     ========================================================= */
+  .historico-card {
+    margin-top: 30px;
     width: 100%;
-    max-height: 450px;
-    overflow-y: auto;
-    overflow-x: auto;
-    border: 1px solid #e0e0e0;
-    border-radius: 4px;
-  }
-  
-  /* Garante que o cabeçalho fique fixo ao rolar */
-  .historico-table thead {
-    position: sticky;
-    top: 0;
-    background-color: #f8f9fa;
-    z-index: 1;
-  }
-  
-  .historico-table th {
-    padding: 10px 8px;
-    border: 1px solid #dee2e6;
-    white-space: nowrap;
-    background-color: #f8f9fa;
-  }
-
-  .historico-full-width {
-    width: 100vw;
-    position: relative;
-    left: 10%;
-    right: 10%;
-    margin-left: -50vw;
-    margin-right: -50vw;
     background-color: #fff;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
     padding: 20px;
     box-sizing: border-box;
-    margin-top: 40px;
   }
-
+  
+  .historico-table-container {
+    width: 100%;
+    overflow-x: auto; /* Permite rolar a tabela em telas menores sem quebrar a página */
+    -webkit-overflow-scrolling: touch;
+  }
+  
+  /* =========================================================
+     MEDIA QUERIES (RESPONSIVIDADE MOBILE & TABLET)
+     ========================================================= */
+  @media (max-width: 768px) {
+    .estoque-container {
+      padding: 10px;
+    }
+  
+    .estoque-card,
+    .historico-card {
+      padding: 15px;
+    }
+  
+    /* Em telas menores, 2 colunas por linha para economizar espaço */
+    .form-grid {
+      grid-template-columns: repeat(2, 1fr);
+      gap: 10px;
+    }
+  
+    .estoque-title {
+      font-size: 18px;
+    }
+  }
+  
+  @media (max-width: 480px) {
+    /* Em celulares, passa tudo para coluna única */
+    .form-grid {
+      grid-template-columns: 1fr;
+    }
+  
+    .input-customizado,
+    .select-customizado {
+      font-size: 14px; /* Evita auto-zoom do iOS em inputs */
+      padding: 10px;
+    }
+  
+    .btn-submit {
+      padding: 14px;
+    }
+  }

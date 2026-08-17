@@ -1,105 +1,117 @@
-/* src/dashboard/dashboard.css */
-.dashboard-container {    
-    padding: 12px;
-    min-height: 100vh;
-    width: 170vh;
-    box-sizing: border-box;
-    background-color: #f8fafc;
-    box-sizing: border-box;
-    
-  }
-  
-  /* Painel de Boas-Vindas com o Degradê Laranja, Rosa e Azul Royal */
-  .dashboard-welcome-box {
-    background: linear-gradient(135deg, #ff7e40 0%, #ff4b91 50%, #1a42f0 100%);
-    border-radius: 16px;
-    padding: 40px;
-    color: white;
-    margin-bottom: 30px;
-    box-shadow: 0 10px 25px -5px rgba(26, 66, 240, 0.2);
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-  }
-  
-  .welcome-text h1 {
-    font-size: 28px;
-    font-weight: 700;
-    margin-bottom: 8px;
-  }
-  
-  .welcome-text p {
-    font-size: 16px;
-    opacity: 0.9;
-  }
-  
-  .welcome-icon-wrapper {
-    background-color: rgba(255, 255, 255, 0.15);
-    padding: 20px;
-    border-radius: 50%;
-    backdrop-filter: blur(5px);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
-  
-  /* Grid de Atalhos Rápidos / Estatísticas */
-  .dashboard-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-    gap: 20px;
-  }
-  
-  .dashboard-card {
-    background-color: white;
-    border: 1px solid #e2e8f0;
-    border-radius: 12px;
-    padding: 24px;
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-    transition: transform 0.2s, box-shadow 0.2s;
-  }
-  
-  .dashboard-card:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05);
-  }
-  
-  .card-icon {
-    width: 40px;
-    height: 40px;
-    border-radius: 8px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
-  
-  /* Cores dos ícones dos cards remetendo à identidade */
-  .bg-azul { background-color: rgba(26, 66, 240, 0.1); color: #1a42f0; }
-  .bg-laranja { background-color: rgba(255, 126, 64, 0.1); color: #ff7e40; }
-  .bg-rosa { background-color: rgba(255, 75, 145, 0.1); color: #ff4b91; }
-  
-  .card-info h3 {
-    font-size: 14px;
-    color: #64748b;
-    font-weight: 500;
-    margin-bottom: 4px;
-  }
-  
-  .card-info p {
-    font-size: 24px;
-    font-weight: 700;
-    color: #0f172a;
-  }
+/* Container Principal do Dashboard */
+.dashboard-container {
+  display: flex;
+  flex-direction: column; /* Força o alinhamento de cima para baixo */
+  gap: 24px;
+  padding: 24px;
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+  box-sizing: border-box;
+  background-color: #f8fafc;
+  min-height: 100vh;
+}
 
-  /* Card de largura total */
-.dashboard-full-card {
-  background: white;
+/* 1. HEADER / BANNER DE BOAS-VINDAS (Topo de fora a fora) */
+.dashboard-welcome-box {
+  width: 100%;
+  background: linear-gradient(135deg, #ff7e40 0%, #ff4b91 50%, #1a42f0 100%);
+  border-radius: 16px;
+  padding: 28px 36px;
+  color: white;
+  box-shadow: 0 10px 25px -5px rgba(26, 66, 240, 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  box-sizing: border-box;
+}
+
+.welcome-text h1 {
+  font-size: 26px;
+  font-weight: 700;
+  margin: 0 0 8px 0;
+}
+
+.welcome-text p {
+  font-size: 15px;
+  opacity: 0.95;
+  margin: 0;
+}
+
+.welcome-icon-wrapper {
+  background-color: rgba(255, 255, 255, 0.18);
+  padding: 16px;
+  border-radius: 50%;
+  backdrop-filter: blur(6px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+/* 2. GRID DOS 3 CARDS INFERIORES AO BANNER */
+.dashboard-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr); /* 3 colunas iguais lado a lado no desktop */
+  gap: 20px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.dashboard-card {
+  background-color: white;
+  border: 1px solid #e2e8f0;
   border-radius: 12px;
   padding: 20px;
-  margin-top: 24px;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  transition: transform 0.2s, box-shadow 0.2s;
+  box-sizing: border-box;
+}
+
+.dashboard-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 16px -4px rgba(0, 0, 0, 0.08);
+}
+
+.card-icon {
+  width: 42px;
+  height: 42px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.bg-azul { background-color: rgba(26, 66, 240, 0.1); color: #1a42f0; }
+.bg-laranja { background-color: rgba(255, 126, 64, 0.1); color: #ff7e40; }
+.bg-rosa { background-color: rgba(255, 75, 145, 0.1); color: #ff4b91; }
+
+.card-info h3 {
+  font-size: 12px;
+  color: #64748b;
+  font-weight: 600;
+  margin: 0 0 4px 0;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.card-info p {
+  font-size: 20px;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0;
+}
+
+/* 3. CARD DA TABELA DE ESTOQUE (Abaixo dos 3 Cards) */
+.dashboard-full-card {
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 24px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
   width: 100%;
   box-sizing: border-box;
 }
@@ -107,33 +119,41 @@
 .full-card-header {
   display: flex;
   align-items: center;
-  border-bottom: 1px solid #f3f4f6;
-  padding-bottom: 15px;
-  margin-bottom: 15px;
+  gap: 12px;
+  border-bottom: 1px solid #f1f5f9;
+  padding-bottom: 16px;
+  margin-bottom: 20px;
 }
 
 /* Tabela de Estoque */
 .estoque-table-wrapper {
+  max-height: 400px;
+  overflow-y: auto;
   overflow-x: auto;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
 }
 
 .estoque-table {
   width: 100%;
   border-collapse: collapse;
   text-align: left;
-  font-size: 0.95rem;
+  font-size: 0.9rem;
 }
 
-.estoque-table th {
+.estoque-table thead th {
+  position: sticky;
+  top: 0;
   background-color: #f8fafc;
   color: #475569;
   padding: 12px 16px;
   font-weight: 600;
   border-bottom: 2px solid #e2e8f0;
+  z-index: 10;
 }
 
 .estoque-table td {
-  padding: 14px 16px;
+  padding: 12px 16px;
   border-bottom: 1px solid #f1f5f9;
   color: #334155;
 }
@@ -143,15 +163,8 @@
 }
 
 /* Helpers Visuais */
-.font-bold {
-  font-weight: 600;
-}
-
-.text-muted {
-  color: #64748b;
-  font-size: 0.9rem;
-}
-
+.font-bold { font-weight: 600; }
+.text-muted { color: #64748b; font-size: 0.85rem; }
 .badge-tamanho {
   background: #f1f5f9;
   padding: 4px 8px;
@@ -159,63 +172,48 @@
   font-weight: 700;
   color: #475569;
 }
-
-.estoque-qtd {
-  color: #16a34a;
-}
-
-.valor-venda {
-  font-weight: 600;
-  color: #0f172a;
-}
-
+.estoque-qtd { color: #16a34a; }
+.valor-venda { font-weight: 600; color: #0f172a; }
 .loading-text, .empty-text {
   text-align: center;
-  color: #666;
-  padding: 20px;
+  color: #64748b;
+  padding: 24px;
 }
-/* ==========================================================================
-   MEDIA QUERIES - REGRAS ESPECÍFICAS PARA CELULARES (ATÉ 768px)
-   ========================================================================== */
-   @media (max-width: 768px) {
-  
-    /* Ajuste da Caixa de Boas-vindas */
-    .dashboard-welcome-box {
-      flex-direction: column; /* Empilha o texto e o ícone verticalmente */
-      text-align: center;
-      padding: 24px;
-      gap: 20px;
-    }
-  
-    .welcome-text h1 {
-      font-size: 22px; /* Diminui o título para caber no celular */
-    }
-  
-    .welcome-text p {
-      font-size: 14px;
-    }
-  
-    .welcome-icon-wrapper {
-      padding: 15px; /* Reduz ligeiramente o tamanho da bola do ícone */
-    }
-  
-    /* Grid de Cards Estatísticos */
-    .dashboard-grid {
-      grid-template-columns: 1fr; /* Força os cards a ocuparem 100% da largura, empilhados */
-      gap: 12px;
-    }
-  
-    .dashboard-card {
-      padding: 16px; /* Economiza espaço interno */
-    }
-  
-    .card-info p {
-      font-size: 20px; /* Diminui os números gigantes */
-    }
-  
-    /* Ajustes Gerais do Painel de Baixo */
-    .dashboard-full-card {
-      padding: 12px;
-      margin-top: 16px;
-    }
+
+/* Custom Scrollbar */
+.estoque-table-wrapper::-webkit-scrollbar { width: 6px; height: 6px; }
+.estoque-table-wrapper::-webkit-scrollbar-track { background: #f1f1f1; }
+.estoque-table-wrapper::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+.estoque-table-wrapper::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+
+/* REGRAS RESPONSIVAS PARA TABLETS E CELULARES */
+@media (max-width: 900px) {
+  .dashboard-grid {
+    grid-template-columns: repeat(2, 1fr);
   }
+}
+
+@media (max-width: 640px) {
+  .dashboard-container {
+    padding: 16px;
+  }
+
+  .dashboard-welcome-box {
+    flex-direction: column;
+    text-align: center;
+    padding: 20px 16px;
+    gap: 16px;
+  }
+
+  .welcome-text h1 { font-size: 20px; }
+  .welcome-text p { font-size: 13px; }
+
+  .dashboard-grid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .dashboard-full-card {
+    padding: 16px;
+  }
+}

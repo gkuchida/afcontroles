@@ -1,60 +1,112 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
+import { supabase } from '../supabaseCliente';
 import './fidelidade.css';
 
 export default function Fidelidade() {
   const [historicoGeral, setHistoricoGeral] = useState([]);
+  const [carregando, setCarregando] = useState(true);
 
   // Estados do formulário de entrada manual
   const [cliente, setCliente] = useState('');
   const [valor, setValor] = useState('');
   const [data, setData] = useState(new Date().toISOString().split('T')[0]);
 
-  // Novo estado para a barra de pesquisa do histórico
+  // Estado para a barra de pesquisa do histórico
   const [pesquisa, setPesquisa] = useState('');
 
-  // Função auxiliar para ignorar acentos, espaços extras e maiúsculas/minúsculas
+  // 1. Carregar dados do Supabase
+  const carregarHistorico = async () => {
+    try {
+      setCarregando(true);
+      const { data: dados, error } = await supabase
+        .from('fidelidade_materiais')
+        .select('*')
+        .order('data', { ascending: false })
+        .order('id', { ascending: false });
+
+      if (error) throw error;
+      setHistoricoGeral(dados || []);
+    } catch (error) {
+      console.error("Erro ao buscar histórico do Supabase:", error.message);
+    } finally {
+      setCarregando(false);
+    }
+  };
+
+  useEffect(() => {
+    carregarHistorico();
+  }, []);
+
+  // Normalização de nomes (remove acentos, caixa alta e espaços duplicados)
   const normalizarNome = (nome) => {
     if (!nome) return '';
     return nome
       .trim()
       .toLowerCase()
       .normalize("NFD")
-      .replace(/[\u0300-\u036f]/g, "") // Remove acentos
-      .replace(/\s+/g, ' ');          // Remove espaços duplos internos
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/\s+/g, ' ');
   };
 
-  const handleAdicionarCompra = (e) => {
+  // 2. Salvar uma nova compra
+  const handleAdicionarCompra = async (e) => {
     e.preventDefault();
     if (!cliente || !valor) return;
 
     const novaCompra = {
-      id: Date.now(),
       tipo: 'COMPRA',
       data,
       cliente: cliente.trim(),
       valor: parseFloat(valor),
     };
 
-    setHistoricoGeral([novaCompra, ...historicoGeral]);
-    setCliente('');
-    setValor('');
+    try {
+      const { data: inserido, error } = await supabase
+        .from('fidelidade_materiais')
+        .insert([novaCompra])
+        .select();
+
+      if (error) throw error;
+
+      if (inserido) {
+        setHistoricoGeral([inserido[0], ...historicoGeral]);
+      }
+      
+      setCliente('');
+      setValor('');
+    } catch (error) {
+      alert("Erro ao salvar compra: " + error.message);
+    }
   };
 
-  const handleRetirarBandana = (nomeOriginal) => {
+  // 3. Registrar retirada do brinde
+  const handleRetirarBandana = async (nomeOriginal) => {
     const dataAtual = new Date().toISOString().split('T')[0];
     
     const novaRetirada = {
-      id: Date.now(),
       tipo: 'RETIRADA',
       data: dataAtual,
       cliente: nomeOriginal.trim(),
       valor: 0
     };
 
-    setHistoricoGeral([novaRetirada, ...historicoGeral]);
+    try {
+      const { data: inserido, error } = await supabase
+        .from('fidelidade_materiais')
+        .insert([novaRetirada])
+        .select();
+
+      if (error) throw error;
+
+      if (inserido) {
+        setHistoricoGeral([inserido[0], ...historicoGeral]);
+      }
+    } catch (error) {
+      alert("Erro ao registrar entrega de brinde: " + error.message);
+    }
   };
 
-  // Processa o histórico para gerar os saldos ativos dos clientes
+  // Processa o histórico para calcular saldos e prêmios de forma precisa
   const resumoClientes = useMemo(() => {
     const resumo = {};
 
@@ -70,7 +122,7 @@ export default function Fidelidade() {
       }
 
       if (item.tipo === 'COMPRA') {
-        resumo[chave].totalCompradoBruto += item.valor;
+        resumo[chave].totalCompradoBruto += Number(item.valor || 0);
       } else if (item.tipo === 'RETIRADA') {
         resumo[chave].totalRetiradas += 1;
       }
@@ -78,26 +130,33 @@ export default function Fidelidade() {
 
     return Object.keys(resumo).map(chave => {
       const dados = resumo[chave];
-      const totalBandanasGanhasBruto = Math.floor(dados.totalCompradoBruto / 150);
-      const bandanasDisponiveis = Math.max(0, totalBandanasGanhasBruto - dados.totalRetiradas);
-      const saldoAtualDoCiclo = dados.totalCompradoBruto - (dados.totalRetiradas * 150);
+      const totalBruto = dados.totalCompradoBruto;
       
-      const restoSoma = saldoAtualDoCiclo % 150;
-      const faltamParaProximo = Math.max(0, 150 - restoSoma);
+      // Total de brindes que o valor bruto já concedeu
+      const totalBandanasGanhasBruto = Math.floor(totalBruto / 150);
+      
+      // Brindes ainda não resgatados
+      const bandanasDisponiveis = Math.max(0, totalBandanasGanhasBruto - dados.totalRetiradas);
+      
+      // Sobra do ciclo atual rumo ao PRÓXIMO brinde (ex: R$ 200 => R$ 50 de sobra)
+      const saldoSobraCiclo = totalBruto % 150;
+      
+      // Quanto falta para o próximo ciclo de R$ 150
+      const faltamParaProximo = saldoSobraCiclo === 0 && totalBruto > 0 ? 0 : 150 - saldoSobraCiclo;
 
       return {
         nome: dados.nomeExibicao,
-        totalComprado: saldoAtualDoCiclo,
+        totalCompradoBruto: totalBruto,
+        saldoSobraCiclo,
         bandanasDisponiveis,
-        faltamParaProximo: saldoAtualDoCiclo >= 150 ? 0 : faltamParaProximo
+        faltamParaProximo
       };
     });
   }, [historicoGeral]);
 
-  // Filtra o histórico linha a linha com base no que foi digitado na pesquisa
+  // Filtra o histórico linha a linha
   const historicoFiltrado = useMemo(() => {
     const termoNormalizado = normalizarNome(pesquisa);
-    
     if (!termoNormalizado) return historicoGeral;
 
     return historicoGeral.filter(mov => 
@@ -164,22 +223,29 @@ export default function Fidelidade() {
               <thead>
                 <tr>
                   <th>Cliente</th>
-                  <th>Saldo Pontuação Atual</th>
+                  <th>Sobra p/ Próximo Brinde</th>
                   <th>Faltam para Prêmio</th>
                   <th>Prêmios Disponíveis</th>
                   <th>Ação</th>
                 </tr>
               </thead>
               <tbody>
-                {resumoClientes.length === 0 ? (
+                {carregando ? (
+                  <tr>
+                    <td colSpan="5" className="sem-dados">Buscando dados no Supabase...</td>
+                  </tr>
+                ) : resumoClientes.length === 0 ? (
                   <tr>
                     <td colSpan="5" className="sem-dados">Nenhum cliente com compras registradas.</td>
                   </tr>
                 ) : (
                   resumoClientes.map((item) => (
-                    <tr key={item.nome}>
+                    <tr 
+                      key={item.nome}
+                      className={item.bandanasDisponiveis > 0 ? 'linha-destaque-premio' : ''}
+                    >
                       <td className="col-nome">{item.nome}</td>
-                      <td>R$ {item.totalComprado.toFixed(2)}</td>
+                      <td>R$ {item.saldoSobraCiclo.toFixed(2)}</td>
                       <td>
                         {item.bandanasDisponiveis > 0 ? (
                           <span className="badge-meta">Prêmio Liberado!</span>
@@ -189,9 +255,9 @@ export default function Fidelidade() {
                       </td>
                       <td>
                         {item.bandanasDisponiveis > 0 ? (
-                          <span className="badge-premio">{item.bandanasDisponiveis} bandana(s) 🎁</span>
+                          <span className="badge-premio">{item.bandanasDisponiveis} brinde(s) 🎁</span>
                         ) : (
-                          <span className="sem-premio">Nenhuma</span>
+                          <span className="sem-premio">Nenhum</span>
                         )}
                       </td>
                       <td>
@@ -218,7 +284,6 @@ export default function Fidelidade() {
         <div className="historico-header-acoes">
           <h2>Histórico de Movimentações (Linha a Linha)</h2>
           
-          {/* Campo de Busca Otimizado */}
           <div className="busca-wrapper">
             <input 
               type="text"
@@ -241,7 +306,11 @@ export default function Fidelidade() {
               </tr>
             </thead>
             <tbody>
-              {historicoFiltrado.length === 0 ? (
+              {carregando ? (
+                <tr>
+                  <td colSpan="4" className="sem-dados">Carregando histórico...</td>
+                </tr>
+              ) : historicoFiltrado.length === 0 ? (
                 <tr>
                   <td colSpan="4" className="sem-dados">
                     {pesquisa ? 'Nenhum resultado encontrado para esta busca.' : 'Nenhuma movimentação registrada.'}
@@ -250,7 +319,7 @@ export default function Fidelidade() {
               ) : (
                 historicoFiltrado.map(mov => (
                   <tr key={mov.id} className={mov.tipo === 'RETIRADA' ? 'linha-retirada' : ''}>
-                    <td>{mov.data.split('-').reverse().join('/')}</td>
+                    <td>{mov.data ? mov.data.split('-').reverse().join('/') : ''}</td>
                     <td>{mov.cliente}</td>
                     <td>
                       {mov.tipo === 'COMPRA' ? (
@@ -261,9 +330,9 @@ export default function Fidelidade() {
                     </td>
                     <td>
                       {mov.tipo === 'COMPRA' ? (
-                        `R$ ${mov.valor.toFixed(2)}`
+                        `R$ ${Number(mov.valor).toFixed(2)}`
                       ) : (
-                        <strong style={{ color: '#16a34a' }}>Bandana Entregue</strong>
+                        <strong style={{ color: '#16a34a' }}>Brinde Entregue</strong>
                       )}
                     </td>
                   </tr>

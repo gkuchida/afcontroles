@@ -32,7 +32,7 @@ export default function ClientesPets() {
     torax: '',
     comprimento: '',
     nascimento: '',
-    sexo: 'Macho',
+    sexo: '',
     observacao: ''
   });
 
@@ -144,7 +144,7 @@ export default function ClientesPets() {
       torax: '',
       comprimento: '',
       nascimento: '',
-      sexo: 'Macho',
+      sexo: '',
       observacao: ''
     });
     setPetEditandoId(null);
@@ -160,7 +160,7 @@ export default function ClientesPets() {
       torax: pet.torax || '',
       comprimento: pet.comprimento || '',
       nascimento: pet.nascimento || '',
-      sexo: pet.sexo || 'Macho',
+      sexo: pet.sexo || '',
       observacao: pet.observacao || ''
     });
     setAbaAtiva('pets');
@@ -254,16 +254,16 @@ export default function ClientesPets() {
                 />
               </div>
 
-              <div style={{ display: 'flex', gap: '8px' }}>
-                <button type="submit" className="btn-save" style={{ flex: 1 }}>
-                  <Plus size={16} /> {clienteEditandoId ? 'Atualizar' : 'Salvar'} Cliente
+              <div className="button-group">
+                <button type="submit" className="btn-save">
+                    <Plus size={16} /> {clienteEditandoId ? 'Atualizar' : 'Salvar'} Cliente
                 </button>
                 {clienteEditandoId && (
-                  <button type="button" onClick={resetClienteForm} className="btn-delete">
+                    <button type="button" onClick={resetClienteForm} className="btn-delete">
                     <X size={16} />
-                  </button>
+                    </button>
                 )}
-              </div>
+                </div>
             </form>
           </div>
         )}
@@ -299,7 +299,7 @@ export default function ClientesPets() {
                 />
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px' }}>
+              <div class="medidas">
                 <div className="input-group">
                   <label>Pescoço (cm)</label>
                   <input
@@ -319,7 +319,7 @@ export default function ClientesPets() {
                   />
                 </div>
                 <div className="input-group">
-                  <label>Compr. (cm)</label>
+                  <label>Comprimento (cm)</label>
                   <input
                     type="text"
                     placeholder="30"
@@ -329,7 +329,7 @@ export default function ClientesPets() {
                 </div>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+              <div class="dados">
                 <div className="input-group">
                   <label>Nascimento</label>
                   <input
@@ -360,16 +360,16 @@ export default function ClientesPets() {
                 />
               </div>
 
-              <div style={{ display: 'flex', gap: '8px' }}>
-                <button type="submit" className="btn-save" style={{ flex: 1 }}>
-                  <Plus size={16} /> {petEditandoId ? 'Atualizar' : 'Salvar'} Pet
+              <div className="button-group">
+                <button type="submit" className="btn-save">
+                    <Plus size={16} /> {petEditandoId ? 'Atualizar' : 'Salvar'} Pet
                 </button>
                 {petEditandoId && (
-                  <button type="button" onClick={resetPetForm} className="btn-delete">
+                    <button type="button" onClick={resetPetForm} className="btn-delete">
                     <X size={16} />
-                  </button>
+                    </button>
                 )}
-              </div>
+                </div>
             </form>
           </div>
         )}
@@ -404,113 +404,82 @@ export default function ClientesPets() {
                       }}
                     >
                       {/* Linha Principal do Tutor */}
-                      <div
-                        style={{
-                          padding: '12px 16px',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justify: 'space-between',
-                          gap: '12px'
-                        }}
-                      >
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flex: 1 }}>
-                          <User size={18} style={{ color: '#4b5563', flexShrink: 0 }} />
-                          <span style={{ fontWeight: 'bold', fontSize: '15px', color: '#1f2937' }}>
+                      <div class="relacao">
+                        <div class="relacao-user">
+                          <User size={18} class="user" />
+                          <span class="sp-user">
                             {tutor.nome}
                           </span>
-                          <span style={{ fontSize: '12px', color: '#6b7280', backgroundColor: '#f3f4f6', padding: '2px 8px', borderRadius: '12px' }}>
+                          <span class="sp-pet">
                             {petsDoTutor.length} {petsDoTutor.length === 1 ? 'pet' : 'pets'}
                           </span>
                         </div>
 
                         {tutor.telefone ? (
-                          <div style={{ fontSize: '13px', color: '#374151', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                            <Phone size={13} style={{ color: '#10b981' }} />
+                          <div class="relacao-tutor">
+                            <Phone size={13} class="fone"/>
                             <span>{tutor.telefone}</span>
                           </div>
                         ) : (
-                          <span style={{ fontSize: '12px', color: '#9ca3af', fontStyle: 'italic' }}>Sem tel</span>
+                          <span class="semtel">Sem tel</span>
                         )}
 
-                        <div style={{ color: '#9ca3af', marginLeft: '8px' }}>
+                        <div class="aberto">
                           {estaAberto ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
                         </div>
                       </div>
 
                       {/* Conteúdo Expandido (Pets do Tutor) */}
                       {estaAberto && (
-                        <div
-                          style={{
-                            padding: '12px 16px',
-                            backgroundColor: '#f9fafb',
-                            borderTop: '1px solid #f3f4f6',
-                            display: 'flex',
-                            flexDirection: 'column',
-                            gap: '10px'
-                          }}
-                        >
+                        <div class="ab-tutor">
                           {/* Ações do Tutor */}
-                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
-                            <span style={{ fontSize: '12px', color: '#6b7280', fontStyle: tutor.observacao ? 'normal' : 'italic' }}>
+                          <div class="ab-tutor-obs">
+                            <span>
                               {tutor.observacao ? `Obs Tutor: ${tutor.observacao}` : 'Sem observações do tutor'}
                             </span>
-                            <div style={{ display: 'flex', gap: '6px' }}>
+                            <div class="edit-tutor">
                               <button
                                 onClick={(e) => handleEditarCliente(tutor, e)}
-                                className="btn-save"
-                                style={{ padding: '3px 8px', fontSize: '11px' }}
+                                className="btn-save"                                
                               >
                                 <Edit2 size={12} /> Editar Tutor
                               </button>
                               <button
                                 onClick={(e) => handleExcluir('clientes', tutor.id, e)}
-                                className="btn-delete"
-                                style={{ padding: '3px 8px', fontSize: '11px' }}
+                                className="btn-delete"                                
                               >
-                                <Trash2 size={12} /> Excluir Tutor
+                                <Trash2 size={12} /> 
                               </button>
                             </div>
                           </div>
 
                           {/* Lista dos Pets */}
                           {petsDoTutor.length === 0 ? (
-                            <p style={{ fontSize: '13px', color: '#9ca3af', fontStyle: 'italic', margin: 0 }}>
-                              Nenhum pet cadastrado para este tutor.
-                            </p>
+                            <p class="ab-tutor-p">Nenhum pet cadastrado para este tutor.</p>
                           ) : (
                             petsDoTutor.map((pet) => (
                               <div
                                 key={pet.id}
-                                style={{
-                                  backgroundColor: '#fff',
-                                  padding: '10px 12px',
-                                  borderRadius: '6px',
-                                  border: '1px solid #e5e7eb',
-                                  display: 'flex',
-                                  flexDirection: 'column',
-                                  gap: '6px'
-                                }}
+                                class="pets-tutor"
                               >
-                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                    <Dog size={15} style={{ color: '#6366f1' }} />
-                                    <strong style={{ fontSize: '14px', color: '#111827' }}>{pet.nome}</strong>
-                                    <span style={{ fontSize: '12px', color: '#6b7280' }}>({pet.sexo || 'N/I'})</span>
+                                <div class="pets-tutor-edit">
+                                  <div class="card-pet">
+                                    <Dog size={15} class="card-dog"/>
+                                    <strong >{pet.nome}</strong>
+                                    <span>({pet.sexo || 'N/I'})</span>
                                   </div>
 
                                   <div style={{ display: 'flex', gap: '4px' }}>
                                     <button
                                       onClick={(e) => handleEditarPet(pet, e)}
-                                      className="btn-save"
-                                      style={{ padding: '3px 6px', fontSize: '11px' }}
+                                      className="btn-save"                                      
                                       title="Editar Pet"
                                     >
                                       <Edit2 size={12} />
                                     </button>
                                     <button
                                       onClick={(e) => handleExcluir('pets', pet.id, e)}
-                                      className="btn-delete"
-                                      style={{ padding: '3px 6px', fontSize: '11px' }}
+                                      className="btn-delete"                                                                            
                                       title="Excluir Pet"
                                     >
                                       <Trash2 size={12} />
@@ -519,9 +488,9 @@ export default function ClientesPets() {
                                 </div>
 
                                 {/* Medidas e Nascimento */}
-                                <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '10px', fontSize: '12px', color: '#374151' }}>
-                                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                    <Ruler size={13} style={{ color: '#8b5cf6' }} />
+                                <div class="medidas-pet">
+                                  <div class="medidas-pet2">
+                                    <Ruler size={13} class="regua" />
                                     <span><strong>Pesc:</strong> {pet.pescoco ? `${pet.pescoco} cm` : '-'}</span>
                                     <span>|</span>
                                     <span><strong>Tórax:</strong> {pet.torax ? `${pet.torax} cm` : '-'}</span>
@@ -530,15 +499,15 @@ export default function ClientesPets() {
                                   </div>
 
                                   {pet.nascimento && (
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginLeft: 'auto' }}>
-                                      <Calendar size={12} style={{ color: '#6b7280' }} />
+                                    <div class="pets-nasc">
+                                      <Calendar size={12} class="pets-calendar" />
                                       <span>{new Date(pet.nascimento).toLocaleDateString('pt-BR')}</span>
                                     </div>
                                   )}
                                 </div>
 
                                 {pet.observacao && (
-                                  <div style={{ fontSize: '11px', color: '#6b7280', fontStyle: 'italic' }}>
+                                  <div class="pets-obs">
                                     <strong>Obs Pet:</strong> {pet.observacao}
                                   </div>
                                 )}

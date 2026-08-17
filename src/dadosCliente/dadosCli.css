@@ -1,8 +1,37 @@
-.cadastros-container {
+/* ==========================================
+   1. ESTRUTURA E BASE (AJUSTADOS)
+   ========================================== */
+  /* Layout Principal (Assumindo que seja um display: flex) */
+  .app-layout, 
+  .dashboard-container, 
+  main {
+    display: flex;
+    width: 100%;
+    min-height: 100vh;
+    overflow-x: hidden; /* Evita rolagem horizontal na tela toda */
+  }
+
+  /* Onde fica o conteúdo principal */
+  .content-wrapper,
+  .main-content {
+    flex: 1;
+    min-width: 0; /* CRUCIAL: impede que o conteúdo estoure a tela no Flexbox */
+    width: 100%;
+  }
+   .cadastros-container {
     padding: 24px;
     max-width: 1000px;
+    width: 100%;
     margin: 0 auto;
+    box-sizing: border-box; /* Impede estourar largura com padding */
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  }
+  
+  /* Garante cálculo de largura correto em todos os elementos */
+  .cadastros-container *,
+  .cadastros-container *::before,
+  .cadastros-container *::after {
+    box-sizing: border-box;
   }
   
   .cadastros-title {
@@ -45,6 +74,8 @@
     border-bottom: 2px solid #e0e0e0;
     margin-bottom: 20px;
     overflow-x: auto;
+    white-space: nowrap; /* Evita quebra indesejada de botões */
+    -webkit-overflow-scrolling: touch;
   }
   
   .tab-button {
@@ -60,6 +91,7 @@
     color: #666;
     border-bottom: 3px solid transparent;
     transition: all 0.2s ease;
+    flex-shrink: 0; /* Impede que o botão fique espremido */
   }
   
   .tab-button:hover {
@@ -72,17 +104,12 @@
     font-weight: 600;
   }
   
-  /* Grid Principal */
+  /* Grid Principal Flexível com minmax */
   .cadastros-grid {
     display: grid;
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
     gap: 24px;
-  }
-  
-  @media (max-width: 768px) {
-    .cadastros-grid {
-      grid-template-columns: 1fr;
-    }
+    width: 100%;
   }
   
   /* Cards */
@@ -93,6 +120,7 @@
     border-radius: 10px;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
     border: 1px solid #eaeaea;
+    width: 100%;
   }
   
   .form-card h3,
@@ -109,6 +137,7 @@
     flex-direction: column;
     gap: 6px;
     margin-bottom: 16px;
+    width: 100%;
   }
   
   .input-group label {
@@ -119,6 +148,7 @@
   
   .input-group input,
   .input-group select {
+    width: 100%;
     padding: 10px 12px;
     border: 1px solid #ccc;
     border-radius: 6px;
@@ -132,25 +162,54 @@
     border-color: #0070f3;
   }
   
-  .btn-save {
+  /* Container dos botões */
+  .button-group {
     display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-    width: 100%;
-    padding: 10px;
-    background-color: #0070f3;
-    color: #fff;
-    border: none;
-    border-radius: 6px;
-    cursor: pointer;
-    font-weight: 500;
-    font-size: 14px;
-    transition: background-color 0.2s ease;
+    gap: 10px;
+    margin-top: 16px;
+    justify-content: flex-end;
+    flex-wrap: wrap; /* Permite quebrar se o espaço for curto */
   }
   
+  /* Botões ajustados sem altura/largura min rígidas */
+  .btn-save {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;        
+    padding: 8px 16px;
+    background-color: #1D3567; 
+    color: #ffffff;
+    border: none;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease-in-out;    
+  }
+      
   .btn-save:hover {
-    background-color: #0059b3;
+    background-color: #3B5B98;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  }
+  
+  .btn-delete {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 8px 12px;
+    background: none;
+    border: none;
+    color: #e53e3e;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+    font-size: 12px;
+  }
+  
+  .btn-delete:hover {
+    background-color: #fff5f5;
   }
   
   /* Lista */
@@ -180,19 +239,292 @@
     margin-top: 2px;
   }
   
-  .btn-delete {
-    background: none;
-    border: none;
-    color: #e53e3e;
-    cursor: pointer;
-    padding: 4px;
-    border-radius: 4px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: background-color 0.2s ease;
+  /* Layouts Internos em Grid Flexível */
+  .medidas {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));
+    gap: 8px;
+  } 
+  
+  .dados {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+    gap: 8px;
   }
   
-  .btn-delete:hover {
-    background-color: #fff5f5;
+  .relacao {
+    padding: 12px 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;    
   }
+  
+  .relacao-user {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex: 1;
+  }
+  
+  .user {
+    color: #4b5563;
+    flex-shrink: 0;
+  }
+  
+  .sp-user {
+    font-weight: bold;
+    font-size: 15px;
+    color: #1f2937;
+  }
+  
+  .sp-pet {
+    font-size: 12px;
+    color: #6b7280;
+    background-color: #f3f4f6;
+    padding: 2px 8px;
+    border-radius: 12px;
+  }
+  
+  .relacao-tutor {
+    font-size: 13px;
+    color: #374151;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+  
+  .fone {
+    color: #10b981;
+  }
+  
+  .semtel {
+    font-size: 12px;
+    color: #9ca3af;
+    font-style: italic;
+  }
+  
+  .aberto {
+    color: #9ca3af;
+    margin-left: 8px;
+  }
+  
+  .ab-tutor {    
+    padding: 12px 16px;
+    background-color: #f9fafb;
+    border-top: 1px solid #f3f4f6;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  
+  .ab-tutor-obs {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 4px;
+  }
+  
+  .ab-tutor-obs .span {
+    font-size: 12px;
+    color: #6b7280;    
+  }
+  
+  .ab-tutor-obs .span.is-normal {
+    font-style: normal;
+  }
+  
+  .ab-tutor-obs .span.is-italic {
+    font-style: italic;
+  }
+  
+  .edit-tutor {
+    display: flex;
+    gap: 6px;
+  }
+  
+  .ab-tutor-p {
+    font-size: 13px;
+    color: #9ca3af;
+    font-style: italic;
+    margin: 0;
+  }
+  
+  .pets-tutor {    
+    background-color: #fff;
+    padding: 10px 12px;
+    border-radius: 6px;
+    border: 1px solid #e5e7eb;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;    
+  }
+  
+  .pets-tutor-edit {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  
+  .card-pet {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  
+  .card-dog {
+    color: #6366f1;
+  }
+  
+  .medidas-pet {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+    font-size: 12px;
+    color: #374151;
+  }
+  
+  .medidas-pet2 {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  
+  .regua {
+    color: #8b5cf6;
+  }
+  
+  .pets-nasc {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    margin-left: auto;
+  }
+  
+  .pets-calendar {
+    color: #8b5cf6;
+  }
+  
+  .pets-obs {
+    font-size: 11px;
+    color: #6b7280;
+    font-style: italic;
+  }
+  
+  /* ==========================================
+     2. REGRAS DE MEDIA QUERIES (RESPONSIVIDADE)
+     ========================================== */
+  
+  @media (max-width: 768px) {
+    .cadastros-container {
+      padding: 16px;
+    }
+  
+    .cadastros-grid {
+      grid-template-columns: 1fr; /* Coluna única no tablet/mobile */
+    }
+  
+    .relacao {
+      flex-wrap: wrap;
+    }
+  
+    .pets-nasc {
+      margin-left: 0;
+    }
+  }
+
+  /* ==========================================
+   CORREÇÃO DO ESPAÇO EM BRANCO (MOBILE)
+   ========================================== */
+
+@media (max-width: 768px) {
+  /* 1. Zera completamente o espaço da Sidebar no mobile */
+  .sidebar, 
+  aside,
+  nav,
+  .sidebar-container,
+  [class*="sidebar"] {
+    display: none !important;
+    width: 0 !important;
+    min-width: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  /* 2. Força o container pai a usar 1 única coluna de 100% */
+  .app-layout, 
+  .dashboard-container,
+  .main-wrapper,
+  body > div { 
+    display: block !important; /* Mudar de grid/flex para block resolve a maioria dos layouts quebrados */
+    grid-template-columns: 1fr !important;
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  /* 3. Estica a área de conteúdo para ocupar a tela inteira */
+  .content-wrapper,
+  .main-content,
+  main,
+  .cadastros-container {
+    width: 100% !important;
+    max-width: 100% !important;
+    margin-left: 0 !important; /* Remove margens esquerdas herdadas da sidebar */
+    padding-left: 12px !important;
+    padding-right: 12px !important;
+    box-sizing: border-box !important;
+  }
+}
+  
+  @media (max-width: 480px) {
+    .cadastros-container {
+      padding: 10px;
+    }
+  
+    .form-card,
+    .list-card {
+      padding: 12px;
+    }
+  
+    /* Força 1 coluna nos mini-grids internos */
+    .medidas,
+    .dados {
+      grid-template-columns: 1fr;
+    }
+  
+    /* Ajusta botões para ocupar largura inteira */
+    .button-group {
+      flex-direction: column;
+      width: 100%;
+    }
+  
+    .btn-save,
+    .btn-delete {
+      width: 100%;
+    }
+  
+    .relacao {
+      flex-direction: column;
+      align-items: flex-start;
+    }
+  
+    .pets-tutor-edit {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 8px;
+    }
+  
+    .ab-tutor-obs {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 6px;
+    }
+  
+    .edit-tutor {
+      width: 100%;
+      justify-content: flex-end;
+    }
+  }
+

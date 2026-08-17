@@ -1,0 +1,228 @@
+/* ==========================================================================
+   ESTILOS GERAIS DO PAINEL DE ESTOQUE (ATELIÊ & LOJA)
+   ========================================================================== */
+
+   :root {
+    --primary: #d9777f;       /* Rosa Ateliê / Terracota Suave */
+    --primary-hover: #c45d66; /* Rosa tom fechado */
+    --bg-main: #fcf9f7;       /* Fundo creme / Off-white */
+    --bg-card: #ffffff;       /* Fundo dos quadros */
+    --text-main: #332d2b;     /* Texto escuro suave */
+    --text-muted: #786f6c;    /* Texto secundário */
+    --border-color: #e8e1dd;  /* Bordas suaves */
+    --input-bg: #faf8f7;      /* Fundo de inputs */
+    --accent-light: #fbeee8;  /* Destaque suave */
+    --radius: 10px;
+    --shadow: 0 4px 15px rgba(0, 0, 0, 0.04);
+  }
+  
+  body {
+    background-color: var(--bg-main);
+    color: var(--text-main);
+    font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    margin: 0;
+    padding: 0;
+  }
+  
+  /* Container Principal */
+  .estoque-container {
+    max-width: 1280px;
+    margin: 40px auto;
+    padding: 0 20px;
+  }
+  
+  .estoque-title {
+    font-size: 28px;
+    font-weight: 700;
+    color: var(--text-main);
+    margin-bottom: 24px;
+    letter-spacing: -0.5px;
+  }
+  
+  /* ==========================================================================
+     FORMULÁRIO DE CADASTRO
+     ========================================================================== */
+  
+  .estoque-card {
+    background: var(--bg-card);
+    padding: 28px;
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    border: 1px solid var(--border-color);
+    margin-bottom: 40px;
+  }
+  
+  .estoque-card-title {
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--text-main);
+    margin-top: 0;
+    margin-bottom: 20px;
+    padding-bottom: 12px;
+    border-bottom: 2px solid var(--accent-light);
+  }
+  
+  /* Grid de Inputs */
+  .form-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+    gap: 18px;
+  }
+  
+  .form-group {
+    display: flex;
+    flex-direction: column;
+  }
+  
+  .form-group-full {
+    grid-column: 1 / -1;
+  }
+  
+  .form-group label {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-muted);
+    margin-bottom: 6px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  
+  /* Estilo padronizado para Inputs e Selects */
+  .input-customizado,
+  .select-customizado {
+    width: 100%;
+    height: 42px;
+    padding: 0 14px;
+    font-size: 14px;
+    color: var(--text-main);
+    background-color: var(--input-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    box-sizing: border-box;
+    outline: none;
+    transition: all 0.2s ease;
+  }
+  
+  .select-customizado {
+    cursor: pointer;
+    appearance: none;
+    background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%3c786f6c' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    background-size: 16px;
+    padding-right: 36px;
+    background-color: #ffffff;
+  }
+  
+  .input-customizado:focus,
+  .select-customizado:focus {
+    border-color: var(--primary);
+    background-color: #ffffff;
+    box-shadow: 0 0 0 3px rgba(217, 119, 127, 0.15);
+  }
+  
+  /* Inputs bloqueados/desativados */
+  .input-customizado:read-only {
+    background-color: #f1ece9;
+    color: var(--text-muted);
+    cursor: not-allowed;
+    border-style: dashed;
+  }
+  
+  /* Botão de Envio */  
+  .btn-submit {
+    margin-top: 20px;
+    padding: 12px 28px;
+    font-size: 15px;
+    font-weight: 600;
+    color: #ffffff;
+    background-color: #3B5B98;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background-color 0.2s ease, transform 0.1s ease;
+  }
+  
+  .btn-submit:hover:not(:disabled) {
+    background-color: #3B5B98;
+  }
+  
+  .btn-submit:active:not(:disabled) {
+    transform: scale(0.98);
+  }
+  
+  .btn-submit:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+  
+ /* Container que gera a rolagem se a tela for pequena */
+/* Container com rolagem suave caso passe da tela */
+.tabela-div {
+  width: 100%;
+  overflow-x: auto;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+}
+
+/* Linhas da Tabela */
+.tabela-linha {
+  display: flex;
+  align-items: center;
+  border-bottom: 1px solid var(--border-color);
+  min-width: 1300px; /* Aumentado para acomodar o texto estendido */
+}
+
+.tabela-linha:last-child {
+  border-bottom: none;
+}
+
+.tabela-linha:hover:not(.tabela-header) {
+  background-color: #E8EEF9;
+}
+
+/* Estilo do Cabeçalho */
+.tabela-header {
+  /*background-color: var(--accent-light);*/
+  background-color: #3B5B98;
+  font-weight: 600;
+  color: #ffffff;
+  border-bottom: 2px solid var(--border-color);
+}
+
+/* Células de dados */
+.tabela-linha > div {
+  padding: 12px 14px;
+  font-size: 14px;
+  white-space: nowrap;
+  box-sizing: border-box;
+}
+
+/* Novas larguras ajustadas (Sem cortar o texto) */
+.col-cat  { width: 130px; }
+.col-mat  { width: 130px; }
+.col-cor  { width: 100px; }
+.col-est  { width: 120px; }
+.col-desc { width: 240px; } /* Aumentado bastante */
+.col-dim  { width: 90px;  } /* Aumentado p/ não cortar "Largura" */
+.col-qtd  { width: 100px; }
+.col-val  { width: 120px; } /* Aumentado p/ não cortar "Valor Pago" */
+.col-data { width: 130px; } /* Aumentado p/ não cortar "Data Compra" */
+.col-loja { width: 110px; }
+.col-obs  { width: 160px; }
+
+/* Estado Vazio */
+.tabela-vazia {
+  padding: 24px;
+  text-align: center;
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+.soleitura{
+  background-color: #F0F7FF;
+  border: #CCE3FF;
+  color: #1E3A8A;
+}

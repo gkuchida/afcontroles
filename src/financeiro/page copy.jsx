@@ -116,42 +116,40 @@ export default function Financeiro() {
         <p>Gerenciamento de investimentos, balanço de vendas e lucros anuais.</p>
       </div>
 
-      {/* COMPARATIVO DE VENDAS POR ANO */}      
+      {/* COMPARATIVO DE VENDAS POR ANO */}
       <div className="financeiro-tabela-anos-box">
         <h3>Comparativo Anual de Vendas e Lucros</h3>
-        <div className="tabela-wrapper">
-          <table className="tabela-financeira-anos">
-            <thead>
-              <tr>
-                <th>Ano</th>
-                <th>Vendas Totais</th>
-                <th>Lucro Estimado</th>
-              </tr>
-            </thead>
-            <tbody>
-              {Object.entries(dadosAnuais)
-                .sort(([anoA], [anoB]) => anoB - anoA)
-                .map(([ano, valores]) => (
-                  <tr key={ano}>
-                    <td className="ano-coluna">{ano}</td>
-                    <td className="cor-vendas font-bold">
-                      {valores.totalVendas.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
-                    </td>
-                    <td className="cor-lucro font-bold">
-                      {valores.totalLucro.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
-                    </td>
-                  </tr>
-                ))}
-              {Object.keys(dadosAnuais).length === 0 && (
-                <tr>
-                  <td colSpan="3" style={{ textAlign: 'center', color: '#666' }}>
-                    Nenhum dado de venda encontrado.
+        <table className="tabela-financeira-anos">
+          <thead>
+            <tr>
+              <th>Ano</th>
+              <th>Vendas Totais</th>
+              <th>Lucro Estimado</th>
+            </tr>
+          </thead>
+          <tbody>
+            {Object.entries(dadosAnuais)
+              .sort(([anoA], [anoB]) => anoB - anoA) // Mostra o ano mais recente primeiro
+              .map(([ano, valores]) => (
+                <tr key={ano}>
+                  <td className="ano-coluna">{ano}</td>
+                  <td className="cor-vendas font-bold">
+                    {valores.totalVendas.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                  </td>
+                  <td className="cor-lucro font-bold">
+                    {valores.totalLucro.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
                   </td>
                 </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
+              ))}
+            {Object.keys(dadosAnuais).length === 0 && (
+              <tr>
+                <td colSpan="3" style={{ textAlign: 'center', color: '#666' }}>
+                  Nenhum dado de venda encontrado.
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
       </div>
 
       {/* TOTAIS CONSOLIDADOS */}

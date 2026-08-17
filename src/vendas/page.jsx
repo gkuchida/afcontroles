@@ -375,7 +375,7 @@ export default function Vendas() {
             {loading ? 'Salvando...' : editandoId ? 'Atualizar Venda' : 'Confirmar Venda'}
           </button>
           {editandoId && (
-            <button type="button" onClick={resetForm} className="btn-submit" style={{ backgroundColor: '#6c757d' }}>
+            <button type="button" onClick={resetForm} className="btn-submit">
               Cancelar Edição
             </button>
           )}

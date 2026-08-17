@@ -578,6 +578,7 @@ export default function Producao() {
               value={formData.comprimento}
               onChange={handleChangeForm}
               className="input-customizado"
+              style={{ backgroundColor: '#fff', bordercolor: 'var(--primary-hover)' }}
               placeholder="Ex: 35"
             />
           </div>
@@ -587,7 +588,7 @@ export default function Producao() {
         <h4 style={{ marginTop: '20px' }}>Materiais Gastos na Peça</h4>
 
         {materiaisUsados.map((mat, idx) => (
-          <div key={idx} className="form-grid" style={{ background: '#fdf6f3', padding: '10px', borderRadius: '8px', marginBottom: '10px' }}>
+          <div key={idx} className="form-grid">
             <div className="form-group">
               <label>Material:</label>
               <select
@@ -667,7 +668,7 @@ export default function Producao() {
           </div>
         ))}
 
-        <button type="button" onClick={adicionarLinhaMaterial} className="btn-submit" style={{ backgroundColor: '#786f6c', marginBottom: '20px' }}>
+        <button type="button" onClick={adicionarLinhaMaterial} className="btn-submit">
           + Adicionar Outro Material
         </button>
 
