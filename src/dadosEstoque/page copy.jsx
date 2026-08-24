@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { supabase } from '../supabaseCliente';
-import { Tag, Shirt, Ruler, Palette, Sparkles, Layers, Plus, Trash2, CheckCircle, AlertCircle } from 'lucide-react';
+import { supabase } from '../supabaseCliente'; // Verifique se o caminho do seu supabaseCliente está correto
+import { Tag, Shirt, Ruler, Palette, Sparkles, Plus, Trash2, CheckCircle, AlertCircle } from 'lucide-react';
 import './dadosE.css';
 
 export default function DadosE() {
@@ -10,7 +10,6 @@ export default function DadosE() {
 
   // Listas de dados salvos
   const [categorias, setCategorias] = useState([]);
-  const [materiais, setMateriais] = useState([]);
   const [modelos, setModelos] = useState([]);
   const [tamanhos, setTamanhos] = useState([]);
   const [cores, setCores] = useState([]);
@@ -18,8 +17,7 @@ export default function DadosE() {
 
   // Estados dos formulários
   const [nomeCategoria, setNomeCategoria] = useState('');
-  const [nomeMaterial, setNomeMaterial] = useState('');
-  const [modeloData, setModeloData] = useState({ nome: '' });
+  const [modeloData, setModeloData] = useState({ categoria_id: '', nome: '' });
   const [tamanhoData, setTamanhoData] = useState({ nome: '', ordem: 0 });
   const [nomeCor, setNomeCor] = useState('');
   const [nomeEstampa, setNomeEstampa] = useState('');
@@ -40,23 +38,19 @@ export default function DadosE() {
       const { data: catData, error: catErr } = await supabase.from('categorias').select('*').order('nome');
       if (!catErr && catData) setCategorias(catData);
 
-      // 2. Materiais
-      const { data: matData, error: matErr } = await supabase.from('materiais').select('*').order('nome');
-      if (!matErr && matData) setMateriais(matData);
-
-      // 3. Modelos
+      // 2. Modelos
       const { data: modData, error: modErr } = await supabase.from('modelos').select('*').order('nome');
       if (!modErr && modData) setModelos(modData);
 
-      // 4. Tamanhos
+      // 3. Tamanhos
       const { data: tamData, error: tamErr } = await supabase.from('tamanhos').select('*').order('ordem', { ascending: true });
       if (!tamErr && tamData) setTamanhos(tamData);
 
-      // 5. Cores
+      // 4. Cores (Verifica se a tabela existe)
       const { data: corData, error: corErr } = await supabase.from('cores').select('*').order('nome');
       if (!corErr && corData) setCores(corData);
 
-      // 6. Estampas
+      // 5. Estampas (Verifica se a tabela existe)
       const { data: estData, error: estErr } = await supabase.from('estampas').select('*').order('nome');
       if (!estErr && estData) setEstampas(estData);
 
@@ -83,31 +77,19 @@ export default function DadosE() {
     }
   };
 
-  const handleSalvarMaterial = async (e) => {
-    e.preventDefault();
-    if (!nomeMaterial.trim()) return;
-
-    const { error } = await supabase.from('materiais').insert([{ nome: nomeMaterial }]);
-    if (error) {
-      exibirMensagem('erro', 'Erro ao salvar material: ' + error.message);
-    } else {
-      exibirMensagem('sucesso', 'Material salvo com sucesso!');
-      setNomeMaterial('');
-      carregarTodosDados();
-    }
-  };
-
   const handleSalvarModelo = async (e) => {
     e.preventDefault();
+    if (!modeloData.nome.trim() || !modeloData.categoria_id) {
+      exibirMensagem('erro', 'Selecione uma categoria e informe o nome do modelo.');
+      return;
+    }
 
-    if (!modeloData.nome.trim()) return;
-
-    const { error } = await supabase.from('modelos').insert([{ nome: modeloData.nome }]);
+    const { error } = await supabase.from('modelos').insert([modeloData]);
     if (error) {
       exibirMensagem('erro', 'Erro ao salvar modelo: ' + error.message);
     } else {
       exibirMensagem('sucesso', 'Modelo salvo com sucesso!');
-      setModeloData({ nome: '' });
+      setModeloData({ categoria_id: '', nome: '' });
       carregarTodosDados();
     }
   };
@@ -168,11 +150,17 @@ export default function DadosE() {
     }
   };
 
+  // Função para pegar nome da categoria vinculada ao modelo
+  const getNomeCategoria = (catId) => {
+    const cat = categorias.find(c => c.id === catId);
+    return cat ? cat.nome : 'Sem categoria';
+  };
+
   return (
     <div className="cadastros-container">
       <h2 className="cadastros-title">Cadastros Auxiliares para Estoque & Produtos</h2>
       <p className="cadastros-subtitle">
-        Gerencie categorias, materiais, modelos, tamanhos, cores e estampas para carregar no estoque.
+        Gerencie categorias, modelos, tamanhos, cores e estampas para carregar no estoque.
       </p>
 
       {/* Alerta de Feedback */}
@@ -190,12 +178,6 @@ export default function DadosE() {
           onClick={() => setAbaAtiva('categorias')}
         >
           <Tag size={16} /> Categorias
-        </button>
-        <button
-          className={`tab-button ${abaAtiva === 'materiais' ? 'active' : ''}`}
-          onClick={() => setAbaAtiva('materiais')}
-        >
-          <Layers size={16} /> Materiais
         </button>
         <button
           className={`tab-button ${abaAtiva === 'modelos' ? 'active' : ''}`}
@@ -260,54 +242,31 @@ export default function DadosE() {
           </div>
         )}
 
-        {/* ABA MATERIAIS */}
-        {abaAtiva === 'materiais' && (
-          <div className="cadastros-grid">
-            <form onSubmit={handleSalvarMaterial} className="form-card">
-              <h3>Novo Material</h3>
-              <div className="input-group">
-                <label>Nome do Material</label>
-                <input
-                  type="text"
-                  placeholder="Ex: Tricoline, Soft, Fleece, ..."
-                  value={nomeMaterial}
-                  onChange={(e) => setNomeMaterial(e.target.value)}
-                  required
-                />
-              </div>
-              <button type="submit" className="btn-save">
-                <Plus size={16} /> Salvar Material
-              </button>
-            </form>
-
-            <div className="list-card">
-              <h3>Materiais Cadastrados ({materiais.length})</h3>
-              <ul className="cadastros-list">
-                {materiais.map((mat) => (
-                  <li key={mat.id} className="list-item">
-                    <span>{mat.nome}</span>
-                    <button onClick={() => handleExcluir('materiais', mat.id)} className="btn-delete">
-                      <Trash2 size={16} />
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          </div>
-        )}
-
         {/* ABA MODELOS */}
         {abaAtiva === 'modelos' && (
           <div className="cadastros-grid">
             <form onSubmit={handleSalvarModelo} className="form-card">
               <h3>Novo Modelo</h3>
               <div className="input-group">
+                <label>Categoria Pertencente</label>
+                <select
+                  value={modeloData.categoria_id}
+                  onChange={(e) => setModeloData({ ...modeloData, categoria_id: e.target.value })}
+                  required
+                >
+                  <option value="">Selecione uma Categoria...</option>
+                  {categorias.map((cat) => (
+                    <option key={cat.id} value={cat.id}>{cat.nome}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="input-group">
                 <label>Nome do Modelo</label>
                 <input
                   type="text"
                   placeholder="Ex: Básica, Pano de prato, ..."
                   value={modeloData.nome}
-                  onChange={(e) => setModeloData({ nome: e.target.value })}
+                  onChange={(e) => setModeloData({ ...modeloData, nome: e.target.value })}
                   required
                 />
               </div>
@@ -321,7 +280,10 @@ export default function DadosE() {
               <ul className="cadastros-list">
                 {modelos.map((mod) => (
                   <li key={mod.id} className="list-item">
-                    <span>{mod.nome}</span>
+                    <div>
+                      <strong>{mod.nome}</strong>
+                      <small>Categoria: {getNomeCategoria(mod.categoria_id)}</small>
+                    </div>
                     <button onClick={() => handleExcluir('modelos', mod.id)} className="btn-delete">
                       <Trash2 size={16} />
                     </button>

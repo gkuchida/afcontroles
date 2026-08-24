@@ -20,13 +20,15 @@
   
   .estoque-title {
     font-size: 22px;
-    font-weight: 700;
+    font-weight: 700;    
     color: var(--text-main);
     margin-bottom: 20px;
   }
   
   .estoque-card {
     background-color: var(--bg-card);
+    margin-left: -90px;
+    width: 1500px;
     padding: 20px;
     border-radius: 8px;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
@@ -102,7 +104,8 @@
      ========================================================= */
   .historico-card {
     margin-top: 30px;
-    width: 100%;
+    margin-left: -90px;
+    width: 1500px;    
     background-color: #fff;
     border-radius: 8px;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
@@ -114,6 +117,54 @@
     width: 100%;
     overflow-x: auto; /* Permite rolar a tabela em telas menores sem quebrar a página */
     -webkit-overflow-scrolling: touch;
+  }
+
+  /* Container de Rolagem (com altura máxima ajustável) */
+.tabela-scroll-container {
+  max-height: 400px; /* Define a altura limite para surgir a barra de rolagem */
+  overflow-y: auto;  /* Scroll vertical */
+  overflow-x: auto;  /* Scroll horizontal se a tabela for larga */
+  border: 1px solid #dee2e6;
+  border-radius: 6px;
+}
+
+/* Estilo Base da Tabela */
+.tabela-historico {
+  width: 100%;
+  border-collapse: separate; /* Necessário para o sticky header não "vazar" */
+  border-spacing: 0;
+  textAlign: left;
+  font-size: 13px;
+}
+
+/* Cabeçalho Fixo (Congelar Painéis) */
+  .tabela-historico thead th {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    background-color: #f8f9fa; /* Fundo sólido para cobrir os dados rolando por baixo */
+    border-bottom: 2px solid #dee2e6;
+    padding: 10px 8px;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.05); /* Sombra suave ao rolar */
+  }
+
+  /* Espaçamento das células das linhas */
+  .tabela-historico tbody td {
+    border-bottom: 1px solid #eee;
+  }
+
+  .tabela-scroll-container {
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    border: 1px solid #e9ecef;
+    border-radius: 8px;
+  }
+  
+  .tabela-historico {
+    width: 100%;
+    min-width: 1100px; /* Garante espaço mínimo antes de ativar o scroll */
+    border-collapse: collapse;
   }
   
   /* =========================================================

@@ -26,7 +26,7 @@
   
   /* Container Principal */
   .estoque-container {
-    max-width: 1280px;
+    max-width: 1280px;    
     margin: 20px auto;
     padding: 0 16px;
     box-sizing: border-box;
@@ -43,7 +43,91 @@
   /* ==========================================================================
      FORMULÁRIO DE CADASTRO
      ========================================================================== */
-  
+  /* ==========================================================================
+   CABEÇALHO DO CARD & MENU DE AÇÕES
+   ========================================================================== */
+
+/* Transforma o topo do card em um contêiner flexível */
+  .estoque-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--border-color);
+  }
+
+  /* Remove margens extras do título dentro do header */
+  .estoque-card-header .estoque-card-title {
+    margin: 0;
+    padding-bottom: 0;
+    border-bottom: none;
+  }
+
+  /* Grupo de botões em linha */
+  .acoes-menu {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  /* Estilo base para os botões de ícone */
+  .btn-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 38px;
+    height: 38px;
+    border-radius: 6px;
+    border: 1px solid var(--border-color);
+    background-color: #ffffff;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    padding: 0;
+  }
+
+  .btn-icon:hover:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
+  }
+
+  .btn-icon:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  /* Botão Salvar (Verde/Primário) */
+  .btn-icon.btn-salvar {
+    background-color: var(--primary);
+    color: #ffffff;
+    border-color: var(--primary);
+  }
+
+  .btn-icon.btn-salvar:hover:not(:disabled) {
+    filter: brightness(0.9);
+  }
+
+  /* Botão Limpar (Amarelo/Laranja) */
+  .btn-icon.btn-limpar {
+    color: #d97706;
+    background-color: #fffbe3;
+    border-color: #fef08a;
+  }
+
+  .btn-icon.btn-limpar:hover {
+    background-color: #fef3c7;
+  }
+
+  /* Botão Cancelar (Vermelho) */
+  .btn-icon.btn-cancelar {
+    color: #dc2626;
+    background-color: #fef2f2;
+    border-color: #fecaca;
+  }
+
+  .btn-icon.btn-cancelar:hover {
+    background-color: #fee2e2;
+  }
   .estoque-card {
     background: var(--bg-card);
     padding: 24px;
@@ -159,70 +243,157 @@
   }
   
   /* ==========================================================================
-     TABELA / LISTAGEM DE ITENS
-     ========================================================================== */
-  
-  .tabela-div {
-    width: 100%;
-    background: transparent;
-    border-radius: var(--radius);
-  }
-  
-  /* Estilo Tabela Desktop */
-  .tabela-linha {
-    display: flex;
-    align-items: center;
-    background-color: #ffffff;
-    border-bottom: 1px solid var(--border-color);
-    min-width: 1350px;
-  }
-  
-  .tabela-header {
-    background-color: var(--primary);
-    font-weight: 600;
-    color: #ffffff;
-    border-top-left-radius: 8px;
-    border-top-right-radius: 8px;
-  }
-  
-  .tabela-linha > div {
-    padding: 12px 14px;
-    font-size: 14px;
-    white-space: nowrap;
-    box-sizing: border-box;
-  }
-  
-  /* Larguras das Colunas (Desktop) */
-  .col-cat  { width: 120px; }
-  .col-mat  { width: 130px; }
-  .col-cor  { width: 100px; }
-  .col-est  { width: 120px; }
-  .col-desc { width: 220px; }
-  .col-dim  { width: 85px;  }
-  .col-qtd  { width: 100px; }
-  .col-val  { width: 110px; }
-  .col-data { width: 120px; }
-  .col-loja { width: 110px; }
-  .col-obs  { width: 150px; }
-  
-  .tabela-vazia {
-    padding: 24px;
-    text-align: center;
-    color: var(--text-muted);
-    background: #fff;
-    border-radius: 8px;
-    border: 1px solid var(--border-color);
-  }
-  
-  /* Container com rolagem horizontal para Desktop/Tablet médio */
+   TABELA / LISTAGEM DE ITENS (ALINHAMENTO EM GRID PERFEITO)
+   ========================================================================== */
+
+/* Container externo que mantém o scroll */
+.tabela-div-container {
+  max-height: 500px;  
+  overflow-x: auto !important;
+  overflow-y: auto !important;
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
+  background: var(--bg-card);
+  box-shadow: var(--shadow);
+}
+
+/* Força a tabela a ter uma largura mínima fixa para estourar o container e rolar */
+.tabela-div {  
+  min-width: 1350px !important;
+  width: 100% !important;
+  min-width: max-content !important;  
+}
+
+/* Alinha TODAS as linhas (cabeçalho e itens) usando exatamente o mesmo Grid */
+.tabela-linha {
+  display: grid !important;
+  /* Define o tamanho exato de cada uma das 12 colunas da tabela */
+  grid-template-columns: 120px 140px 90px 90px 220px 70px 70px 90px 100px 100px 110px 110px 110px 110px !important;
+  align-items: center;
+  background-color: #ffffff;
+  border-bottom: 1px solid var(--border-color) !important;
+  box-sizing: border-box;
+  width: 100% !important;
+}
+
+/* CÉLULAS DA TABELA (Cabeçalho e Conteúdo) */
+.tabela-linha > div {
+  padding: 10px 8px;
+  font-size: 13px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-align: center; /* Alinha todo o conteúdo no centro das colunas */
+  box-sizing: border-box;
+}
+
+/* Alinha a descrição à esquerda para leitura confortável */
+.tabela-linha > div:nth-child(5) {
+  text-align: left;
+}
+
+/* CABEÇALHO STICKY CONGELADO */
+.tabela-linha.tabela-header {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background-color: var(--primary) !important;
+}
+
+.tabela-header > div {
+  background-color: var(--primary) !important;
+  color: #ffffff !important;
+  font-weight: 600;
+  font-size: 13px;
+}
+
+/* ESTILIZAÇÃO DA BARRA DE ROLAGEM */
+.tabela-div-container::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+.tabela-div-container::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 4px;
+}
+
+.tabela-div-container::-webkit-scrollbar-thumb {
+  background: #3B5B98;
+  border-radius: 4px;
+}
+
+.tabela-div-container::-webkit-scrollbar-thumb:hover {
+  background: var(--primary-hover);
+}
+
+/* Ações e Botões dentro da linha */
+.col-acoes, .tabela-linha > div:last-child {
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+}
+
+.btn-tabela-acao {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.2s;
+}
+
+.btn-editar { color: #2563eb; }
+.btn-editar:hover { background-color: #dbeafe; }
+.btn-excluir { color: #dc2626; }
+.btn-excluir:hover { background-color: #fee2e2; }
+
+.linha-em-edicao {
+  background-color: #f0f7ff !important;
+}
+
+/* Coluna de Ações e Botões de Editar/Excluir dentro da Tabela */
+.col-acoes {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.btn-tabela-acao {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 6px;
+  border-radius: 4px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.2s, color 0.2s;
+}
+
+.btn-editar {
+  color: #2563eb;
+}
+
+.btn-editar:hover {
+  background-color: #dbeafe;
+}
+
+.btn-excluir {
+  color: #dc2626;
+}
+
+.btn-excluir:hover {
+  background-color: #fee2e2;
+}
+
+  /* Media Query ajustada para telas maiores */
   @media screen and (min-width: 769px) {
-    .tabela-div {
-      overflow-x: auto;
-      background: var(--bg-card);
-      border: 1px solid var(--border-color);
-      box-shadow: var(--shadow);
-    }
-  
     .btn-submit {
       width: auto;
       padding: 12px 32px;

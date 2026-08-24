@@ -4,42 +4,47 @@ import './producao.css';
 
 export default function Producao() {
   const [loading, setLoading] = useState(false);
-  const [materiais, setMateriais] = useState([]);
+
+  const [materiaisEstoque, setMateriaisEstoque] = useState([]);
   const [producoes, setProducoes] = useState([]);
 
-  const [outroModelo, setOutroModelo] = useState('');
-  const [todosModelos, setTodosModelos] = useState([]);
-  const [modelosFiltrados, setModelosFiltrados] = useState([]);
-  const [tamanhos, setTamanhos] = useState([]);
   const [categorias, setCategorias] = useState([]);
-
-  // Estados para Clientes e Pets do Banco de Dados
+  const [modelos, setModelos] = useState([]);
+  const [tamanhos, setTamanhos] = useState([]);
   const [clientes, setClientes] = useState([]);
-  const [todosPets, setTodosPets] = useState([]);
-  const [petsFiltrados, setPetsFiltrados] = useState([]);
+  const [pets, setPets] = useState([]);
 
-  // Estados para digitação manual ("Outro")
+  const [outroModelo, setOutroModelo] = useState('');
   const [outroCliente, setOutroCliente] = useState('');
   const [outroPet, setOutroPet] = useState('');
 
   const [materiaisUsados, setMateriaisUsados] = useState([
-    { material_id: '', altura: '', largura: '', quantidade: '', valor_gasto: 0, observacao: '' }
+    {
+      material_id: '',
+      descricao: '',
+      altura: '',
+      largura: '',
+      quantidade: '',
+      valor_gasto: 0,
+      observacao: ''
+    }
   ]);
 
   const [formData, setFormData] = useState({
-    categoria_id: '',
-    modelo_id: '',
-    tamanho_id: '',
-    tecido: '',
+    categoria: '',
+    modelo: '',
+    tamanho: '',
+    material: '',
     cliente_id: '',
     pet_id: '',
     pescoco: '',
     torax: '',
     comprimento: '',
     tempo_costura_valor: '',
-    custo: 0,
-    venda: 0,
-    vender_por: 0,
+    custo: '0.00',
+    venda: '0.00',
+    vender_por: '0.00',
+    data_confec: new Date().toISOString().split('T')[0],
     estoque: 'Sim',
     observacao: ''
   });
@@ -52,157 +57,237 @@ export default function Producao() {
     recalcularTotais();
   }, [materiaisUsados, formData.tempo_costura_valor]);
 
-  // Filtra modelos sempre que a categoria selecionada mudar
-  useEffect(() => {
-    if (formData.categoria_id && formData.categoria_id !== 'Outros') {
-      const filtrados = todosModelos.filter(
-        (m) => String(m.categoria_id) === String(formData.categoria_id)
-      );
-      setModelosFiltrados(filtrados);
-    } else {
-      setModelosFiltrados(todosModelos);
-    }
-  }, [formData.categoria_id, todosModelos]);
+  // ============================================================
+  // CARREGAR DADOS
+  // ============================================================
 
-  // Filtra pets conforme o cliente selecionado no Select
-  useEffect(() => {
-    if (formData.cliente_id && formData.cliente_id !== 'Outros') {
-      const filtrados = todosPets.filter(
-        (p) => String(p.cliente_id) === String(formData.cliente_id)
-      );
-      setPetsFiltrados(filtrados);
-    } else {
-      setPetsFiltrados(todosPets);
-    }
-    setFormData((prev) => ({ ...prev, pet_id: '' }));
-  }, [formData.cliente_id, todosPets]);
-
-  const isUUID = (str) => {
-    if (typeof str !== 'string') return false;
-    const regexUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-    return regexUUID.test(str.trim());
-  };
-
-  // 1. CARREGAR DADOS INICIAIS
-  async function carregarDadosIniciais() {
+  const carregarDadosIniciais = async () => {
     try {
       setLoading(true);
-
+  
       const [
-        { data: catData },
-        { data: modData },
-        { data: tamData },
-        { data: cliData },
-        { data: petsData },
-        { data: estqData },
-        { data: prodData }
+        { data: catData, error: catError },
+        { data: modData, error: modError },
+        { data: tamData, error: tamError },
+        { data: cliData, error: cliError },
+        { data: petsData, error: petsError },
+        { data: estqData, error: estqError },
+        { data: prodData, error: prodError },
+        { data: matData, error: matError }
       ] = await Promise.all([
-        supabase.from('categorias').select('*').order('nome'),
-        supabase.from('modelos').select('*').order('nome'),
-        supabase.from('tamanhos').select('*').order('nome'),
-        supabase.from('clientes').select('*').order('nome'),
-        supabase.from('pets').select('*').order('nome'),
-        supabase.from('estoque').select('*').order('descricao'),
+        supabase
+          .from('categorias')
+          .select('*')         
+          .range(0, 99999),
+        supabase
+          .from('modelos')
+          .select('*')
+          .range(0, 99999),
+        supabase
+          .from('tamanhos')
+          .select('*')
+          .range(0, 99999),
+        supabase
+          .from('clientes')
+          .select('*')          
+          .range(0, 99999),
+        supabase
+          .from('pets')
+          .select('*')
+          .range(0, 99999),
+        supabase
+          .from('estoque')
+          .select('*')
+          .range(0, 99999),
         supabase
           .from('produtos')
-          .select(`
-            *,
-            categorias ( nome ),
-            modelos ( nome ),
-            tamanhos ( nome ),
-            clientes ( nome ),
-            pets ( nome ),
-            produto_materiais (
-              id,
-              material_id,
-              altura,
-              largura,
-              quantidade,
-              valor_gasto,
-              estoque ( descricao )
-            )
-          `)
-          .order('created_at', { ascending: false })
-      ]);      
-
-      if (catData) setCategorias(catData);
-      if (modData) {
-        setTodosModelos(modData);
-        setModelosFiltrados(modData);
-      }
-      if (tamData) setTamanhos(tamData);
-      if (cliData) setClientes(cliData);
-      if (petsData) {
-        setTodosPets(petsData);
-        setPetsFiltrados(petsData);
-      }
-      if (estqData) setMateriais(estqData);
-      if (prodData) setProducoes(prodData);
-
+          .select('*')
+          .range(0, 99999),
+        supabase
+          .from('produto_materiais')
+          .select('*')
+          .range(0, 99999)
+      ]);
+  
+      if (catError) throw catError;
+      if (modError) throw modError;
+      if (tamError) throw tamError;
+      if (cliError) throw cliError;
+      if (petsError) throw petsError;
+      if (estqError) throw estqError;
+      if (prodError) throw prodError;
+      if (matError) throw matError;
+  
+      setCategorias(catData || []);
+      setModelos(modData || []);
+      setTamanhos(tamData || []);
+      setClientes(cliData || []);
+      setPets(petsData || []);
+      setMateriaisEstoque(estqData || []);
+  
+      const produtosComMateriais = (prodData || []).map((prod) => {
+  
+        // Pega SOMENTE os materiais pertencentes
+        // a este produto
+        const materiaisDoProduto = (matData || [])
+          .filter(
+            (m) => String(m.produto_id) === String(prod.id)
+          )
+          .sort((a, b) => {
+            const ordemA = Number(a.ordem) || 999999;
+            const ordemB = Number(b.ordem) || 999999;
+  
+            return ordemA - ordemB;
+          });
+  
+        return {
+          ...prod,
+          produto_materiais: materiaisDoProduto
+        };
+      });
+  
+      setProducoes(produtosComMateriais);
+  
     } catch (err) {
       console.error('Erro ao carregar dados:', err);
+      alert(`Erro ao carregar dados: ${err.message || err}`);
     } finally {
       setLoading(false);
     }
-  }
+  };
+
+  // ============================================================
+  // FUNÇÕES AUXILIARES
+  // ============================================================
 
   const parseNum = (val) => {
-    if (!val) return 0;
-    if (typeof val === 'number') return val;
-    return parseFloat(String(val).replace(',', '.')) || 0;
+    if (val === null || val === undefined || val === '') {
+      return 0;
+    }
+
+    if (typeof val === 'number') {
+      return val;
+    }
+
+    return (
+      parseFloat(
+        String(val)
+          .replace('R$', '')
+          .replace(/\s/g, '')
+          .replace(',', '.')
+      ) || 0
+    );
   };
+
+  const formatarDataExibicao = (dataStr) => {
+    if (!dataStr) return '-';
+
+    const apenasData = String(dataStr).split('T')[0];
+    const partes = apenasData.split('-');
+
+    if (partes.length === 3) {
+      return `${partes[2]}/${partes[1]}/${partes[0]}`;
+    }
+
+    return dataStr;
+  };
+
+  // ============================================================
+  // MATERIAL
+  // ============================================================
 
   const handleMaterialChange = (index, field, value) => {
     const novosMateriais = [...materiaisUsados];
-    novosMateriais[index][field] = value;
 
-    const item = novosMateriais[index];
+    const item = {
+      ...novosMateriais[index],
+      [field]: value
+    };
+
+    // ----------------------------------------------------------
+    // DESCRIÇÃO DO MATERIAL
+    // ----------------------------------------------------------
+
+    if (field === 'material_id') {
+      const materialSelecionado = materiaisEstoque.find(
+        (m) => String(m.id) === String(value)
+      );
+
+      item.descricao = materialSelecionado
+        ? materialSelecionado.descricao
+        : '';
+    }
+
+    // ----------------------------------------------------------
+    // CALCULA QUANTIDADE PELA ALTURA X LARGURA
+    // ----------------------------------------------------------
 
     if (field === 'altura' || field === 'largura') {
-      const alt = parseNum(item.altura);
-      const larg = parseNum(item.largura);
-      if (alt > 0 && larg > 0) {
-        item.quantidade = ((alt * larg) / 10000).toFixed(4);
+      const altura = parseNum(item.altura);
+      const largura = parseNum(item.largura);
+
+      if (altura > 0 && largura > 0) {
+        item.quantidade = ((altura * largura) / 10000).toFixed(4);
       }
     }
 
-    const qtdTotal = parseNum(item.quantidade);
-    const materialCadastrado = materiais.find(
+    // ----------------------------------------------------------
+    // CALCULA VALOR GASTO
+    // ----------------------------------------------------------
+
+    const quantidadeTotal = parseNum(item.quantidade);
+
+    const materialCadastrado = materiaisEstoque.find(
       (m) => String(m.id) === String(item.material_id)
     );
 
-    if (materialCadastrado && qtdTotal > 0) {
-      const valorm = parseNum(materialCadastrado.valorm);
-      const valorPagoTotal = parseNum(materialCadastrado.pago);
-      const areaTotalEstoque = parseNum(materialCadastrado.area);
+    if (materialCadastrado && quantidadeTotal > 0) {
+      const valorMetro = parseNum(materialCadastrado.valorm);
+      const valorPago = parseNum(materialCadastrado.pago);
+      const areaEstoque = parseNum(materialCadastrado.area);
 
       let precoPorMetroOuUnidade = 0;
 
-      if (valorm > 0) {
-        precoPorMetroOuUnidade = valorm;
-      } else if (valorPagoTotal > 0 && areaTotalEstoque > 0) {
-        precoPorMetroOuUnidade = valorPagoTotal / areaTotalEstoque;
-      } else if (valorPagoTotal > 0) {
-        precoPorMetroOuUnidade = valorPagoTotal;
+      if (valorMetro > 0) {
+        precoPorMetroOuUnidade = valorMetro;
+      } else if (valorPago > 0 && areaEstoque > 0) {
+        precoPorMetroOuUnidade =
+          valorPago / areaEstoque;
+      } else if (valorPago > 0) {
+        precoPorMetroOuUnidade = valorPago;
       }
 
-      item.valor_gasto = Number((precoPorMetroOuUnidade * qtdTotal).toFixed(2));
+      item.valor_gasto = Number(
+        (precoPorMetroOuUnidade * quantidadeTotal).toFixed(2)
+      );
     } else {
       item.valor_gasto = 0;
     }
 
+    novosMateriais[index] = item;
+
     setMateriaisUsados(novosMateriais);
   };
 
+  // ============================================================
+  // RECALCULA CUSTOS
+  // ============================================================
+
   const recalcularTotais = () => {
-    const mat = materiaisUsados.reduce((acc, curr) => {
-      return acc + (parseNum(curr.valor_gasto) || 0);
-    }, 0);
+    const valorMateriais = materiaisUsados.reduce(
+      (acc, material) =>
+        acc + (parseNum(material.valor_gasto) || 0),
+      0
+    );
 
-    const mob = parseNum(formData.tempo_costura_valor);
+    const maoDeObra = parseNum(
+      formData.tempo_costura_valor
+    );
 
-    const custoTotal = mat + mob;
+    const custoTotal = valorMateriais + maoDeObra;
+
     const valorVenda = custoTotal * 2;
+
     const valorSugerido = Math.ceil(valorVenda);
 
     setFormData((prev) => ({
@@ -213,236 +298,404 @@ export default function Producao() {
     }));
   };
 
+  // ============================================================
+  // FORMULÁRIO
+  // ============================================================
+
   const handleChangeForm = (e) => {
     const { name, value } = e.target;
-    if (name === 'categoria_id') {
-      setFormData((prev) => ({ ...prev, categoria_id: value, modelo_id: '' }));
-    } else {
-      setFormData((prev) => ({ ...prev, [name]: value }));
-    }
+
+    setFormData((prev) => ({
+      ...prev,
+      [name]: value
+    }));
   };
 
   const adicionarLinhaMaterial = () => {
-    setMateriaisUsados([
-      ...materiaisUsados,
-      { material_id: '', altura: '', largura: '', quantidade: '', valor_gasto: 0, observacao: '' }
+    setMateriaisUsados((prev) => [
+      ...prev,
+      {
+        material_id: '',
+        descricao: '',
+        altura: '',
+        largura: '',
+        quantidade: '',
+        valor_gasto: 0,
+        observacao: ''
+      }
     ]);
   };
 
   const removerLinhaMaterial = (index) => {
-    if (materiaisUsados.length === 1) return;
-    const novos = materiaisUsados.filter((_, i) => i !== index);
-    setMateriaisUsados(novos);
+    if (materiaisUsados.length === 1) {
+      return;
+    }
+
+    setMateriaisUsados((prev) =>
+      prev.filter((_, i) => i !== index)
+    );
   };
 
-  // 2. SALVAR PRODUÇÃO E GERAR VENDA
+  // ============================================================
+  // SALVAR PRODUÇÃO
+  // ============================================================
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
 
     try {
-      let finalModeloId = formData.modelo_id && formData.modelo_id !== 'Outros' ? formData.modelo_id : null;
-      let finalClienteId = formData.cliente_id && formData.cliente_id !== 'Outros' ? formData.cliente_id : null;
-      let finalPetId = formData.pet_id && formData.pet_id !== 'Outros' ? formData.pet_id : null;
-      let nomePetTexto = '';
+      // --------------------------------------------------------
+      // MODELO
+      // --------------------------------------------------------
 
-      // --- 1. SE DIGITOU CLIENTE NOVO ---
-      if (formData.cliente_id === 'Outros' && outroCliente.trim()) {
-        const { data: novoCli, error: errCli } = await supabase
+      const finalModeloText =
+        formData.modelo === 'Outros'
+          ? outroModelo.trim()
+          : formData.modelo;
+
+      // --------------------------------------------------------
+      // CLIENTE
+      // --------------------------------------------------------
+
+      let finalClienteId =
+        formData.cliente_id &&
+        formData.cliente_id !== 'Outros'
+          ? formData.cliente_id
+          : null;
+
+      // --------------------------------------------------------
+      // PET
+      // --------------------------------------------------------
+
+      let finalPetId =
+        formData.pet_id &&
+        formData.pet_id !== 'Outros'
+          ? formData.pet_id
+          : null;
+
+      // --------------------------------------------------------
+      // NOVO CLIENTE
+      // --------------------------------------------------------
+
+      if (
+        formData.cliente_id === 'Outros' &&
+        outroCliente.trim()
+      ) {
+        const {
+          data: novoCliente,
+          error: erroCliente
+        } = await supabase
           .from('clientes')
-          .insert([{ nome: outroCliente.trim() }])
+          .insert([
+            {
+              nome: outroCliente.trim()
+            }
+          ])
           .select()
           .single();
 
-        if (errCli) throw new Error(`Erro ao cadastrar novo cliente: ${errCli.message}`);
-        finalClienteId = novoCli.id;
+        if (erroCliente) {
+          throw erroCliente;
+        }
+
+        finalClienteId = novoCliente.id;
       }
 
-      // --- 2. SE DIGITOU PET NOVO ---
-      if (formData.pet_id === 'Outros' && outroPet.trim()) {
-        nomePetTexto = outroPet.trim();
-        const { data: novoPetObj, error: errPet } = await supabase
+      // --------------------------------------------------------
+      // NOVO PET
+      // --------------------------------------------------------
+
+      if (
+        formData.pet_id === 'Outros' &&
+        outroPet.trim()
+      ) {
+        const {
+          data: novoPet,
+          error: erroPet
+        } = await supabase
           .from('pets')
-          .insert([{ nome: outroPet.trim(), cliente_id: finalClienteId }])
+          .insert([
+            {
+              nome: outroPet.trim(),
+              cliente_id: finalClienteId
+            }
+          ])
           .select()
           .single();
 
-        if (errPet) throw new Error(`Erro ao cadastrar novo pet: ${errPet.message}`);
-        finalPetId = novoPetObj.id;
-      } else if (finalPetId) {
-        const petSelecionado = todosPets.find((p) => String(p.id) === String(finalPetId));
-        nomePetTexto = petSelecionado ? petSelecionado.nome : '';
+        if (erroPet) {
+          throw erroPet;
+        }
+
+        finalPetId = novoPet.id;
       }
 
-      // --- 3. SE DIGITOU MODELO NOVO ---
-      if (formData.modelo_id === 'Outros' && outroModelo.trim()) {
-        const { data: novoMod, error: errMod } = await supabase
-          .from('modelos')
-          .insert([{ nome: outroModelo.trim(), categoria_id: isUUID(formData.categoria_id) ? formData.categoria_id : null }])
-          .select()
-          .single();
+      // --------------------------------------------------------
+      // PRODUTO
+      // --------------------------------------------------------
 
-        if (errMod) throw new Error(`Erro ao cadastrar modelo: ${errMod.message}`);
-        finalModeloId = novoMod.id;
-      }
-
-      // --- 4. GRAVA PRODUTO ---
-      const produtoPayload = {
-        categoria_id: isUUID(formData.categoria_id) ? formData.categoria_id : null,
-        modelo_id: isUUID(finalModeloId) ? finalModeloId : null,
-        tamanho_id: isUUID(formData.tamanho_id) ? formData.tamanho_id : null,
-        tecido: formData.tecido?.trim() || null,
-        cliente_id: isUUID(finalClienteId) ? finalClienteId : null,
-        pet_id: isUUID(finalPetId) ? finalPetId : null,
-        nome_pet: nomePetTexto || null,
-        pescoco: parseNum(formData.pescoco) || null,
-        torax: parseNum(formData.torax) || null,
-        comprimento: parseNum(formData.comprimento) || null,
-        custo: parseNum(formData.custo),
-        valor_venda: parseNum(formData.vender_por),
-        estoque: formData.estoque || 'Sim',
-        observacao: formData.observacao?.trim() || null
-      };
-
-      const { data: prodData, error: prodError } = await supabase
+      const {
+        data: produtoCriado,
+        error: erroProduto
+      } = await supabase
         .from('produtos')
-        .insert([produtoPayload])
+        .insert([
+          {
+            categoria: formData.categoria || null,
+            modelo: finalModeloText || null,
+            tamanho: formData.tamanho || null,
+            material: formData.material || null,
+            pescoco: parseNum(formData.pescoco),
+            torax: parseNum(formData.torax),
+            comprimento: parseNum(formData.comprimento),
+            custo: parseNum(formData.custo),
+            valor_venda: parseNum(formData.venda),
+            vender_por: parseNum(formData.vender_por),
+            data_confec: formData.data_confec,
+            estoque: formData.estoque
+          }
+        ])
         .select()
         .single();
 
-      if (prodError) throw prodError;      
+      if (erroProduto) {
+        throw erroProduto;
+      }
 
-      // --- 5. GRAVA MATERIAIS ---      
+      // --------------------------------------------------------
+      // MATERIAIS
+      //
+      // A ordem do array é exatamente a ordem em que o usuário
+      // colocou os materiais no formulário.
+      // --------------------------------------------------------
+
       const materiaisPayload = materiaisUsados
-        .filter((m) => m.material_id && String(m.material_id).trim() !== '' && m.material_id !== 'Outros')
-        .map((m) => ({
-          produto_id: prodData.id,
-          material_id: m.material_id,
+        .filter((m) => m.material_id || m.descricao)
+        .map((m, index) => ({
+          produto_id: produtoCriado.id, // ✅ CORRETO! Usa o ID retornado pelo insert do produto.
+          material_id: m.material_id
+            ? Number(m.material_id)
+            : null,
+          descricao: m.descricao || null,
           altura: parseNum(m.altura) || null,
           largura: parseNum(m.largura) || null,
           quantidade: parseNum(m.quantidade) || null,
           valor_gasto: parseNum(m.valor_gasto) || 0,
-          observacao: m.observacao?.trim() || null
+          observacao: m.observacao?.trim() || null,
+          ordem: index + 1
         }));
 
       if (materiaisPayload.length > 0) {
-        const { error: matError } = await supabase
+        const {
+          error: erroMateriais
+        } = await supabase
           .from('produto_materiais')
           .insert(materiaisPayload);
 
-        if (matError) throw matError;
+        if (erroMateriais) {
+          throw erroMateriais;
+        }
       }
 
-      // --- 6. GRAVA VENDA AUTOMÁTICA SE FOR PARA CLIENTE (ENCOMENDA) ---
-      if (finalClienteId) {
-        const valorVendaNum = parseNum(formData.vender_por);
-        const custoTotalNum = parseNum(formData.custo);
+      // --------------------------------------------------------
+      // VENDA
+      // --------------------------------------------------------
 
+      if (finalClienteId) {
         const payloadVenda = {
-          data_venda: new Date().toISOString().split('T')[0],
+          data_venda:
+            new Date().toISOString().split('T')[0],
+
           cliente_id: finalClienteId,
+
           pet_id: finalPetId,
-          produto_id: prodData.id,
+
+          produto_id: produtoCriado.id,
+
           quantidade: 1,
-          caracteristicas: `${formData.tecido || 'Encomenda'}`,
-          valor_unitario: valorVendaNum,
-          valor_total: valorVendaNum,
-          custo_venda: custoTotalNum,
-          lucro_venda: valorVendaNum - custoTotalNum,
+
+          caracteristicas:
+            formData.material || 'Encomenda',
+
+          valor_unitario:
+            parseNum(formData.vender_por),
+
+          valor_total:
+            parseNum(formData.vender_por),
+
+          custo_venda:
+            parseNum(formData.custo),
+
+          lucro_venda:
+            parseNum(formData.vender_por) -
+            parseNum(formData.custo),
+
           forma_pagamento: 'A definir',
+
           canal_venda: 'WhatsApp',
-          observacao: 'Gerado via Produção (Encomenda)'
+
+          observacao: 'Gerado via Produção'
         };
 
-        const { error: errVenda } = await supabase.from('vendas').insert([payloadVenda]);
-        if (errVenda) console.error('Erro ao gerar registro automático de venda:', errVenda);
+        const { error: erroVenda } =
+          await supabase
+            .from('vendas')
+            .insert([payloadVenda]);
+
+        if (erroVenda) {
+          throw erroVenda;
+        }
       }
 
-      alert('Produção registrada com sucesso!');
+      alert('Produção salva com sucesso!');
 
-      // Reset
+      // --------------------------------------------------------
+      // LIMPA FORMULÁRIO
+      // --------------------------------------------------------
+
       setFormData({
-        categoria_id: '',
-        modelo_id: '',
-        tamanho_id: '',
-        tecido: '',
+        categoria: '',
+        modelo: '',
+        tamanho: '',
+        material: '',
         cliente_id: '',
         pet_id: '',
         pescoco: '',
         torax: '',
         comprimento: '',
         tempo_costura_valor: '',
-        custo: 0,
-        venda: 0,
-        vender_por: 0,
+        custo: '0.00',
+        venda: '0.00',
+        vender_por: '0.00',
+        data_confec:
+          new Date().toISOString().split('T')[0],
         estoque: 'Sim',
         observacao: ''
       });
+
       setOutroModelo('');
       setOutroCliente('');
       setOutroPet('');
+
       setMateriaisUsados([
-        { material_id: '', altura: '', largura: '', quantidade: '', valor_gasto: 0, observacao: '' }
+        {
+          material_id: '',
+          descricao: '',
+          altura: '',
+          largura: '',
+          quantidade: '',
+          valor_gasto: 0,
+          observacao: ''
+        }
       ]);
 
+      // Recarrega tudo diretamente do banco
       await carregarDadosIniciais();
 
     } catch (err) {
-      console.error('Erro no cadastro:', err);
-      alert(`Erro ao salvar: ${err.message || 'Falha na gravação'}`);
+      console.error(
+        'Erro ao cadastrar produção:',
+        err
+      );
+
+      alert(
+        `Erro ao salvar: ${
+          err.message || 'Falha na gravação'
+        }`
+      );
     } finally {
       setLoading(false);
     }
   };
 
-  return (
-    <div className="estoque-container" style={{ paddingBottom: '60px' }}>
-      <h2 className="estoque-title">Ficha de Produção</h2>
+  // ============================================================
+  // RENDER
+  // ============================================================
 
-      <form onSubmit={handleSubmit} className="estoque-card">
-        {/* DADOS BÁSICOS DA PEÇA */}
+  return (
+    <div
+      className="estoque-container"
+      style={{ paddingBottom: '60px' }}
+    >
+      <h2 className="estoque-title">
+        Ficha de Produção
+      </h2>
+
+      {/* ======================================================
+          FORMULÁRIO
+      ====================================================== */}
+
+      <form
+        onSubmit={handleSubmit}
+        className="estoque-card"
+      >
         <div className="form-grid">
+
+          {/* CATEGORIA */}
+
           <div className="form-group">
             <label>Categoria:</label>
+
             <select
-              name="categoria_id"
-              value={formData.categoria_id}
+              name="categoria"
+              value={formData.categoria}
               onChange={handleChangeForm}
               className="select-customizado"
             >
-              <option value="">Selecione...</option>
-              {categorias.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.nome}
+              <option value="">
+                Selecione...
+              </option>
+
+              {categorias.map((categoria) => (
+                <option
+                  key={categoria.id}
+                  value={categoria.nome}
+                >
+                  {categoria.nome}
                 </option>
               ))}
             </select>
           </div>
 
+          {/* MODELO */}
+
           <div className="form-group">
             <label>Modelo:</label>
+
             <select
-              name="modelo_id"
-              value={formData.modelo_id}
+              name="modelo"
+              value={formData.modelo}
               onChange={handleChangeForm}
               className="select-customizado"
-              disabled={!formData.categoria_id}
               required
             >
-              <option value="">Selecione...</option>
-              {modelosFiltrados.map((m) => (
-                <option key={m.id} value={m.id}>
-                  {m.nome}
+              <option value="">
+                Selecione...
+              </option>
+
+              {modelos.map((modelo) => (
+                <option
+                  key={modelo.id}
+                  value={modelo.nome}
+                >
+                  {modelo.nome}
                 </option>
               ))}
-              <option value="Outros">+ Outro (Digitar)</option>
+
+              <option value="Outros">
+                + Outro (Digitar)
+              </option>
             </select>
-            {formData.modelo_id === 'Outros' && (
+
+            {formData.modelo === 'Outros' && (
               <input
                 type="text"
                 placeholder="Digite o nome do modelo..."
                 value={outroModelo}
-                onChange={(e) => setOutroModelo(e.target.value)}
+                onChange={(e) =>
+                  setOutroModelo(e.target.value)
+                }
                 className="input-customizado"
                 style={{ marginTop: '8px' }}
                 required
@@ -450,62 +703,96 @@ export default function Producao() {
             )}
           </div>
 
+          {/* TAMANHO */}
+
           <div className="form-group">
             <label>Tamanho:</label>
+
             <select
-              name="tamanho_id"
-              value={formData.tamanho_id}
+              name="tamanho"
+              value={formData.tamanho}
               onChange={handleChangeForm}
               className="select-customizado"
               required
             >
-              <option value="">Selecione...</option>
-              {tamanhos.map((t) => (
-                <option key={t.id} value={t.id}>
-                  {t.nome}
+              <option value="">
+                Selecione...
+              </option>
+
+              {tamanhos.map((tamanho) => (
+                <option
+                  key={tamanho.id}
+                  value={tamanho.nome}
+                >
+                  {tamanho.nome}
                 </option>
               ))}
             </select>
           </div>
 
+          {/* TECIDO */}
+
           <div className="form-group">
-            <label>Tecido:</label>
+            <label>Tecido / Material:</label>
+
             <input
               type="text"
-              name="tecido"
-              value={formData.tecido}
+              name="material"
+              value={formData.material}
               onChange={handleChangeForm}
               className="input-customizado"
-              placeholder="Ex: Soft, Tricoline"
+              placeholder="Ex: Soft, Tricoline, Fleece"
             />
           </div>
         </div>
 
-        {/* SELECTS DE CLIENTE E PET */}
-        <h4 style={{ marginTop: '20px' }}>Cliente e Pet</h4>
+        {/* ====================================================
+            CLIENTE / PET
+        ==================================================== */}
+
+        <h4 style={{ marginTop: '20px' }}>
+          Cliente e Pet (Encomenda)
+        </h4>
+
         <div className="form-grid">
+
+          {/* CLIENTE */}
+
           <div className="form-group">
             <label>Cliente:</label>
+
             <select
               name="cliente_id"
               value={formData.cliente_id}
               onChange={handleChangeForm}
               className="select-customizado"
             >
-              <option value="">Selecione o Cliente...</option>
-              {clientes.map((cli) => (
-                <option key={cli.id} value={cli.id}>
-                  {cli.nome}
+              <option value="">
+                Nenhum (Pronta Entrega)
+              </option>
+
+              {clientes.map((cliente) => (
+                <option
+                  key={cliente.id}
+                  value={cliente.id}
+                >
+                  {cliente.nome}
                 </option>
               ))}
-              <option value="Outros">+ Cadastrar Novo Cliente</option>
+
+              <option value="Outros">
+                + Cadastrar Novo Cliente
+              </option>
             </select>
+
             {formData.cliente_id === 'Outros' && (
               <input
                 type="text"
-                placeholder="Digite o nome do novo cliente..."
+                placeholder="Digite o nome do cliente..."
                 value={outroCliente}
-                onChange={(e) => setOutroCliente(e.target.value)}
+                onChange={(e) =>
+                  setOutroCliente(e.target.value)
+                }
                 className="input-customizado"
                 style={{ marginTop: '8px' }}
                 required
@@ -513,41 +800,85 @@ export default function Producao() {
             )}
           </div>
 
+          {/* PET */}
+
           <div className="form-group">
             <label>Pet:</label>
+
             <select
               name="pet_id"
               value={formData.pet_id}
               onChange={handleChangeForm}
               className="select-customizado"
             >
-              <option value="">Selecione o Pet...</option>
-              {petsFiltrados.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.nome}
-                </option>
-              ))}
-              <option value="Outros">+ Cadastrar Novo Pet</option>
+              <option value="">
+                Selecione...
+              </option>
+
+              {pets
+                .filter(
+                  (pet) =>
+                    !formData.cliente_id ||
+                    String(pet.cliente_id) ===
+                      String(formData.cliente_id)
+                )
+                .map((pet) => (
+                  <option
+                    key={pet.id}
+                    value={pet.id}
+                  >
+                    {pet.nome}
+                  </option>
+                ))}
+
+              <option value="Outros">
+                + Cadastrar Novo Pet
+              </option>
             </select>
+
             {formData.pet_id === 'Outros' && (
               <input
                 type="text"
-                placeholder="Digite o nome do novo pet..."
+                placeholder="Digite o nome do pet..."
                 value={outroPet}
-                onChange={(e) => setOutroPet(e.target.value)}
+                onChange={(e) =>
+                  setOutroPet(e.target.value)
+                }
                 className="input-customizado"
                 style={{ marginTop: '8px' }}
                 required
               />
             )}
           </div>
+
+          {/* DATA */}
+
+          <div className="form-group">
+            <label>Data Confecção:</label>
+
+            <input
+              type="date"
+              name="data_confec"
+              value={formData.data_confec}
+              onChange={handleChangeForm}
+              className="input-customizado"
+            />
+          </div>
         </div>
 
-        {/* MEDIDAS (CM) */}
-        <h4 style={{ marginTop: '20px' }}>Medidas Específicas (cm)</h4>
+        {/* ====================================================
+            MEDIDAS
+        ==================================================== */}
+
+        <h4 style={{ marginTop: '20px' }}>
+          Medidas (cm)
+        </h4>
+
         <div className="form-grid">
+
           <div className="form-group">
             <label>Pescoço (cm):</label>
+
             <input
               type="text"
               name="pescoco"
@@ -560,6 +891,7 @@ export default function Producao() {
 
           <div className="form-group">
             <label>Tórax (cm):</label>
+
             <input
               type="text"
               name="torax"
@@ -572,34 +904,56 @@ export default function Producao() {
 
           <div className="form-group">
             <label>Comprimento (cm):</label>
+
             <input
               type="text"
               name="comprimento"
               value={formData.comprimento}
               onChange={handleChangeForm}
               className="input-customizado"
-              style={{ backgroundColor: '#fff', bordercolor: 'var(--primary-hover)' }}
               placeholder="Ex: 35"
             />
           </div>
         </div>
 
-        {/* MATERIAIS */}
-        <h4 style={{ marginTop: '20px' }}>Materiais Gastos na Peça</h4>
+        {/* ====================================================
+            MATERIAIS
+        ==================================================== */}
+
+        <h4 style={{ marginTop: '20px' }}>
+          Materiais Usados
+        </h4>
 
         {materiaisUsados.map((mat, idx) => (
-          <div key={idx} className="form-grid">
+          <div
+            key={idx}
+            className="form-grid"
+          >
+
             <div className="form-group">
               <label>Material:</label>
+
               <select
                 value={mat.material_id}
-                onChange={(e) => handleMaterialChange(idx, 'material_id', e.target.value)}
+                onChange={(e) =>
+                  handleMaterialChange(
+                    idx,
+                    'material_id',
+                    e.target.value
+                  )
+                }
                 className="select-customizado"
               >
-                <option value="">Selecione o Material...</option>
-                {materiais.map((m) => (
-                  <option key={m.id} value={m.id}>
-                    {m.descricao}
+                <option value="">
+                  Selecione...
+                </option>
+
+                {materiaisEstoque.map((material) => (
+                  <option
+                    key={material.id}
+                    value={material.id}
+                  >
+                    {material.descricao}
                   </option>
                 ))}
               </select>
@@ -607,10 +961,17 @@ export default function Producao() {
 
             <div className="form-group">
               <label>Alt (cm):</label>
+
               <input
                 type="text"
                 value={mat.altura}
-                onChange={(e) => handleMaterialChange(idx, 'altura', e.target.value)}
+                onChange={(e) =>
+                  handleMaterialChange(
+                    idx,
+                    'altura',
+                    e.target.value
+                  )
+                }
                 className="input-customizado"
                 placeholder="15"
               />
@@ -618,10 +979,17 @@ export default function Producao() {
 
             <div className="form-group">
               <label>Larg (cm):</label>
+
               <input
                 type="text"
                 value={mat.largura}
-                onChange={(e) => handleMaterialChange(idx, 'largura', e.target.value)}
+                onChange={(e) =>
+                  handleMaterialChange(
+                    idx,
+                    'largura',
+                    e.target.value
+                  )
+                }
                 className="input-customizado"
                 placeholder="20"
               />
@@ -629,10 +997,17 @@ export default function Producao() {
 
             <div className="form-group">
               <label>Qtd Total (m²):</label>
+
               <input
                 type="text"
                 value={mat.quantidade}
-                onChange={(e) => handleMaterialChange(idx, 'quantidade', e.target.value)}
+                onChange={(e) =>
+                  handleMaterialChange(
+                    idx,
+                    'quantidade',
+                    e.target.value
+                  )
+                }
                 className="input-customizado"
                 placeholder="0.03"
               />
@@ -640,17 +1015,26 @@ export default function Producao() {
 
             <div className="form-group">
               <label>Valor Gasto (R$):</label>
-              <div style={{ display: 'flex', gap: '8px' }}>
+
+              <div
+                style={{
+                  display: 'flex',
+                  gap: '8px'
+                }}
+              >
                 <input
                   type="text"
                   value={`R$ ${mat.valor_gasto}`}
                   className="input-customizado"
                   readOnly
                 />
+
                 {materiaisUsados.length > 1 && (
                   <button
                     type="button"
-                    onClick={() => removerLinhaMaterial(idx)}
+                    onClick={() =>
+                      removerLinhaMaterial(idx)
+                    }
                     style={{
                       background: '#ff4d4f',
                       color: '#fff',
@@ -668,14 +1052,26 @@ export default function Producao() {
           </div>
         ))}
 
-        <button type="button" onClick={adicionarLinhaMaterial} className="btn-submit">
+        <button
+          type="button"
+          onClick={adicionarLinhaMaterial}
+          className="btn-submit"
+        >
           + Adicionar Outro Material
         </button>
 
-        {/* TOTALIZADORES */}
-        <div className="form-grid">
+        {/* ====================================================
+            TOTAIS
+        ==================================================== */}
+
+        <div
+          className="form-grid"
+          style={{ marginTop: '20px' }}
+        >
+
           <div className="form-group">
-            <label>Mão de Obra / Costura (R$):</label>
+            <label>Mão de Obra (R$):</label>
+
             <input
               type="text"
               name="tempo_costura_valor"
@@ -688,186 +1084,269 @@ export default function Producao() {
 
           <div className="form-group">
             <label>Custo Total (R$):</label>
-            <input type="text" value={`R$ ${formData.custo}`} className="input-customizado" readOnly />
-          </div>
 
-          <div className="form-group">
-            <label>Vender Por (Sugestão R$):</label>
-            <input type="text" value={`R$ ${formData.vender_por}`} className="input-customizado" readOnly />
-          </div>
-
-          <div className="form-group">
-            <label>Observação:</label>
             <input
               type="text"
-              name="observacao"
-              value={formData.observacao}
-              onChange={handleChangeForm}
+              value={`R$ ${formData.custo}`}
               className="input-customizado"
-              placeholder="Anotações gerais..."
+              readOnly
             />
+          </div>
+
+          <div className="form-group">
+            <label>
+              Vender Por (Sugestão R$):
+            </label>
+
+            <input
+              type="text"
+              value={`R$ ${formData.vender_por}`}
+              className="input-customizado"
+              readOnly
+            />
+          </div>
+
+          <div className="form-group">
+            <label>Vai pro Estoque?</label>
+
+            <select
+              name="estoque"
+              value={formData.estoque}
+              onChange={handleChangeForm}
+              className="select-customizado"
+            >
+              <option value="Sim">Sim</option>
+              <option value="Não">Não</option>
+            </select>
           </div>
         </div>
 
-        <button type="submit" disabled={loading} className="btn-submit" style={{ marginTop: '15px' }}>
-          {loading ? 'Salvando...' : 'Cadastrar Produção'}
+        <button
+          type="submit"
+          disabled={loading}
+          className="btn-submit"
+          style={{ marginTop: '15px' }}
+        >
+          {loading
+            ? 'Salvando...'
+            : 'Cadastrar Produção'}
         </button>
       </form>
 
-      {/* HISTÓRICO DE PRODUÇÃO */}
-      <div className="historico-card" style={{
-        marginTop: '30px',
-        width: '100%',
-        backgroundColor: '#fff',
-        borderRadius: '8px',
-        boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
-        padding: '20px',
-        boxSizing: 'border-box'
-      }}>
-        <h3 className="estoque-title" style={{ fontSize: '18px', marginBottom: '15px', color: '#333' }}>
+      {/* ======================================================
+          HISTÓRICO
+      ====================================================== */}
+
+      <div className="historico-card">
+
+        <h3
+          className="estoque-title"
+          style={{
+            fontSize: '18px',
+            marginBottom: '15px'
+          }}
+        >
           Histórico de Produção
         </h3>
 
-        <div className="historico-table-container">
-          <table className="historico-table" style={{ 
-            width: '100%', 
-            borderCollapse: 'collapse', 
-            minWidth: '1300px', 
-            textAlign: 'left', 
-            fontSize: '13px' 
-          }}>
+        <div className="tabela-scroll-container">
+
+          <table className="tabela-historico">
+
             <thead>
-              <tr style={{ borderBottom: '2px solid #dee2e6' }}>
+              <tr>
                 <th>Categoria</th>
                 <th>Modelo</th>
                 <th>Tamanho</th>
                 <th>Tecido</th>
-                <th>Cliente</th>
-                <th>Pet</th>
                 <th>Pescoço</th>
                 <th>Tórax</th>
                 <th>Comprimento</th>
                 <th>Material</th>
-                <th>Altura</th>
-                <th>Largura</th>
-                <th>Qtd. Usada</th>
+                <th>Alt/Larg</th>
+                <th>Qtd Usada</th>
                 <th>Valor Gasto</th>
                 <th>Custo</th>
-                <th>Venda Sugerida</th>
-                <th>Data</th>
+                <th>Vender Por</th>
+                <th>Data Conféc.</th>
                 <th>Estoque</th>
-                <th>Observação</th>
               </tr>
             </thead>
+
             <tbody>
               {producoes.length === 0 ? (
                 <tr>
-                  <td colSpan="19" style={{ padding: '20px', textAlign: 'center', color: '#888' }}>
+                  <td
+                    colSpan="15"
+                    style={{
+                      padding: '20px',
+                      textAlign: 'center',
+                      color: '#888'
+                    }}
+                  >
                     Nenhuma produção registrada.
                   </td>
                 </tr>
               ) : (
-                producoes.map((p) => {
-                  const listaMats = p.produto_materiais || [];
+                producoes.map((produto) => {
 
-                  return (
-                    <tr key={p.id} style={{ borderBottom: '2px solid #ccc', verticalAlign: 'middle' }}>
-                      <td style={{ padding: '8px', border: '1px solid #ddd' }}>
-                        {p.categorias?.nome || '-'}
-                      </td>
-                      <td style={{ padding: '8px', border: '1px solid #ddd' }}>
-                        {p.modelos?.nome || '-'}
-                      </td>
-                      <td style={{ padding: '8px', border: '1px solid #ddd' }}>
-                        {p.tamanhos?.nome || '-'}
-                      </td>
-                      <td style={{ padding: '8px', border: '1px solid #ddd' }}>
-                        {p.tecido || '-'}
-                      </td>
-                      <td style={{ padding: '8px', border: '1px solid #ddd' }}>
-                        {p.clientes?.nome || '-'}
-                      </td>
-                      <td style={{ padding: '8px', border: '1px solid #ddd' }}>
-                        {p.pets?.nome || p.nome_pet || '-'}
-                      </td>
-                      <td style={{ padding: '8px', border: '1px solid #ddd', textAlign: 'center' }}>{p.pescoco ?? '-'}</td>
-                      <td style={{ padding: '8px', border: '1px solid #ddd', textAlign: 'center' }}>{p.torax ?? '-'}</td>
-                      <td style={{ padding: '8px', border: '1px solid #ddd', textAlign: 'center' }}>{p.comprimento ?? '-'}</td>
+                  const materiais = produto.produto_materiais || [];
 
-                      <td style={{ padding: '0', border: '1px solid #ddd', minWidth: '150px' }}>
-                        {listaMats.length > 0 ? (
-                          listaMats.map((m, idx) => (
-                            <div key={m.id || idx} style={{ padding: '4px 8px', borderBottom: idx < listaMats.length - 1 ? '1px solid #eee' : 'none' }}>
-                              {m.estoque?.descricao || m.material_id || '-'}
-                            </div>
-                          ))
-                        ) : '-'}
-                      </td>
+                  const listaMateriais =
+                    materiais.length > 0
+                      ? materiais
+                      : [null];
 
-                      <td style={{ padding: '0', border: '1px solid #ddd', textAlign: 'center' }}>
-                        {listaMats.length > 0 ? (
-                          listaMats.map((m, idx) => (
-                            <div key={m.id || idx} style={{ padding: '4px 8px', borderBottom: idx < listaMats.length - 1 ? '1px solid #eee' : 'none' }}>
-                              {m.altura ?? '-'}
-                            </div>
-                          ))
-                        ) : '-'}
-                      </td>
+                  const totalLinhas = listaMateriais.length;
 
-                      <td style={{ padding: '0', border: '1px solid #ddd', textAlign: 'center' }}>
-                        {listaMats.length > 0 ? (
-                          listaMats.map((m, idx) => (
-                            <div key={m.id || idx} style={{ padding: '4px 8px', borderBottom: idx < listaMats.length - 1 ? '1px solid #eee' : 'none' }}>
-                              {m.largura ?? '-'}
-                            </div>
-                          ))
-                        ) : '-'}
-                      </td>
+                  return listaMateriais.map((material, index) => {
 
-                      <td style={{ padding: '0', border: '1px solid #ddd', textAlign: 'center' }}>
-                        {listaMats.length > 0 ? (
-                          listaMats.map((m, idx) => (
-                            <div key={m.id || idx} style={{ padding: '4px 8px', borderBottom: idx < listaMats.length - 1 ? '1px solid #eee' : 'none' }}>
-                              {m.quantidade ?? '-'}
-                            </div>
-                          ))
-                        ) : '-'}
-                      </td>
+                    const isPrimeiraLinha = index === 0;
 
-                      <td style={{ padding: '0', border: '1px solid #ddd', textAlign: 'right' }}>
-                        {listaMats.length > 0 ? (
-                          listaMats.map((m, idx) => (
-                            <div key={m.id || idx} style={{ padding: '4px 8px', borderBottom: idx < listaMats.length - 1 ? '1px solid #eee' : 'none' }}>
-                              {m.valor_gasto ? `R$ ${Number(m.valor_gasto).toFixed(2)}` : '-'}
-                            </div>
-                          ))
-                        ) : '-'}
-                      </td>
+                    return (
+                      <tr
+                        key={`${produto.id}-${material?.id || index}`}
+                        style={{
+                          borderBottom:
+                            index === totalLinhas - 1
+                              ? '2px solid #aaa'
+                              : '1px solid #eee'
+                        }}
+                      >
 
-                      <td style={{ padding: '8px', border: '1px solid #ddd', color: 'red', fontWeight: 'bold' }}>
-                        {p.custo ? `R$ ${Number(p.custo).toFixed(2)}` : 'R$ 0.00'}
-                      </td>
+                        {/* DADOS DA PRODUÇÃO */}
+                        {isPrimeiraLinha && (
+                          <>
+                            <td rowSpan={totalLinhas}>
+                              {produto.categoria || '-'}
+                            </td>
 
-                      <td style={{ padding: '8px', border: '1px solid #ddd', color: '#0056b3', fontWeight: 'bold' }}>
-                        {p.valor_venda ? `R$ ${Number(p.valor_venda).toFixed(2)}` : 'R$ 0.00'}
-                      </td>
+                            <td rowSpan={totalLinhas}>
+                              {produto.modelo || '-'}
+                            </td>
 
-                      <td style={{ padding: '8px', border: '1px solid #ddd', whiteSpace: 'nowrap' }}>
-                        {p.created_at ? new Date(p.created_at).toLocaleDateString('pt-BR') : '-'}
-                      </td>
+                            <td
+                              rowSpan={totalLinhas}
+                              style={{ textAlign: 'center' }}
+                            >
+                              {produto.tamanho || '-'}
+                            </td>
 
-                      <td style={{ padding: '8px', border: '1px solid #ddd', textAlign: 'center' }}>
-                        {p.estoque ?? '0'}
-                      </td>
+                            <td rowSpan={totalLinhas}>
+                              {produto.material || '-'}
+                            </td>
 
-                      <td style={{ padding: '8px', border: '1px solid #ddd' }}>
-                        {p.observacao || '-'}
-                      </td>
-                    </tr>
-                  );
+                            <td
+                              rowSpan={totalLinhas}
+                              style={{ textAlign: 'center' }}
+                            >
+                              {produto.pescoco ?? '-'}
+                            </td>
+
+                            <td
+                              rowSpan={totalLinhas}
+                              style={{ textAlign: 'center' }}
+                            >
+                              {produto.torax ?? '-'}
+                            </td>
+
+                            <td
+                              rowSpan={totalLinhas}
+                              style={{ textAlign: 'center' }}
+                            >
+                              {produto.comprimento ?? '-'}
+                            </td>
+                          </>
+                        )}
+
+                        {/* MATERIAL */}
+                        <td>
+                          {material?.descricao || '-'}
+                        </td>
+
+                        {/* ALTURA / LARGURA */}
+                        <td style={{ textAlign: 'center' }}>
+                          {material
+                            ? (
+                                material.altura != null &&
+                                material.largura != null
+                                  ? `${material.altura}x${material.largura}`
+                                  : '-'
+                              )
+                            : '-'}
+                        </td>
+
+                        {/* QUANTIDADE */}
+                        <td style={{ textAlign: 'center' }}>
+                          {material?.quantidade ?? '-'}
+                        </td>
+
+                        {/* VALOR GASTO */}
+                        <td style={{ textAlign: 'right' }}>
+                          {material
+                            ? `R$ ${Number(material.valor_gasto || 0).toFixed(2)}`
+                            : '-'}
+                        </td>
+
+                        {/* CUSTO */}
+                        {isPrimeiraLinha && (
+                          <td
+                            rowSpan={totalLinhas}
+                            style={{
+                              color: 'red',
+                              fontWeight: 'bold',
+                              textAlign: 'center'
+                            }}
+                          >
+                            R$ {Number(produto.custo || 0).toFixed(2)}
+                          </td>
+                        )}
+
+                        {/* VENDER POR */}
+                        {isPrimeiraLinha && (
+                          <td
+                            rowSpan={totalLinhas}
+                            style={{
+                              color: 'blue',
+                              fontWeight: 'bold',
+                              textAlign: 'center'
+                            }}
+                          >
+                            R$ {Number(
+                              produto.vender_por || 0
+                            ).toFixed(2)}
+                          </td>
+                        )}
+
+                        {/* DATA */}
+                        {isPrimeiraLinha && (
+                          <td
+                            rowSpan={totalLinhas}
+                            style={{ textAlign: 'center' }}
+                          >
+                            {formatarDataExibicao(
+                              produto.data_confec
+                            )}
+                          </td>
+                        )}
+
+                        {/* ESTOQUE */}
+                        {isPrimeiraLinha && (
+                          <td
+                            rowSpan={totalLinhas}
+                            style={{ textAlign: 'center' }}
+                          >
+                            {produto.estoque || '-'}
+                          </td>
+                        )}
+
+                      </tr>
+                    );
+                  });
                 })
               )}
             </tbody>
+
           </table>
         </div>
       </div>
