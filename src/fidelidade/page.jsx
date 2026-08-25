@@ -11,15 +11,18 @@ export default function Fidelidade() {
   const [valor, setValor] = useState('');
   const [data, setData] = useState(new Date().toISOString().split('T')[0]);
 
-  // Busca do Histórico
+  // Filtros da tabela de Saldos
+  const [buscaSaldo, setBuscaSaldo] = useState('');
+  const [ordemSaldo, setOrdemSaldo] = useState('az'); // 'az' ou 'za'
+
+  // Filtro da tabela de Histórico
   const [pesquisa, setPesquisa] = useState('');
 
-  // 1. Buscar Histórico no Supabase
   const carregarHistorico = async () => {
     try {
       setCarregando(true);
       const { data: dados, error } = await supabase
-        .from('fidelidade_materiais')
+        .from('fidelidade')
         .select('*')
         .order('data', { ascending: false })
         .order('id', { ascending: false });
@@ -37,7 +40,6 @@ export default function Fidelidade() {
     carregarHistorico();
   }, []);
 
-  // Normalização de Nomes
   const normalizarNome = (nome) => {
     if (!nome) return '';
     return nome
@@ -48,21 +50,20 @@ export default function Fidelidade() {
       .replace(/\s+/g, ' ');
   };
 
-  // 2. Lançar Compra
   const handleAdicionarCompra = async (e) => {
     e.preventDefault();
     if (!cliente || !valor) return;
 
     const novaCompra = {
-      tipo: 'COMPRA',
       data,
       cliente: cliente.trim(),
-      valor: parseFloat(valor),
+      valor_compra: parseFloat(valor),
+      retirou: 'NÃO'
     };
 
     try {
       const { data: inserido, error } = await supabase
-        .from('fidelidade_materiais')
+        .from('fidelidade')
         .insert([novaCompra])
         .select();
 
@@ -70,6 +71,8 @@ export default function Fidelidade() {
 
       if (inserido && inserido.length > 0) {
         setHistoricoGeral(prev => [inserido[0], ...prev]);
+      } else {
+        await carregarHistorico();
       }
       
       setCliente('');
@@ -79,20 +82,19 @@ export default function Fidelidade() {
     }
   };
 
-  // 3. Registrar Retirada
-  const handleRetirarBandana = async (nomeOriginal) => {
+  const handleRetirarBrinde = async (nomeOriginal) => {
     const dataAtual = new Date().toISOString().split('T')[0];
     
     const novaRetirada = {
-      tipo: 'RETIRADA',
       data: dataAtual,
       cliente: nomeOriginal.trim(),
-      valor: 0
+      valor_compra: 0,
+      retirou: 'SIM'
     };
 
     try {
       const { data: inserido, error } = await supabase
-        .from('fidelidade_materiais')
+        .from('fidelidade')
         .insert([novaRetirada])
         .select();
 
@@ -100,13 +102,15 @@ export default function Fidelidade() {
 
       if (inserido && inserido.length > 0) {
         setHistoricoGeral(prev => [inserido[0], ...prev]);
+      } else {
+        await carregarHistorico();
       }
     } catch (error) {
       alert("Erro ao registrar entrega de brinde: " + error.message);
     }
   };
 
-  // 4. Resumo de Saldos e Premiações
+  // 1. Resumo + Busca + Ordenação da tabela de Saldos
   const resumoClientes = useMemo(() => {
     const resumo = {};
 
@@ -121,39 +125,55 @@ export default function Fidelidade() {
         };
       }
 
-      if (item.tipo === 'COMPRA') {
-        resumo[chave].totalCompradoBruto += Number(item.valor || 0);
-      } else if (item.tipo === 'RETIRADA') {
+      const valorItem = Number(item.valor_compra || 0);
+      resumo[chave].totalCompradoBruto += valorItem;
+
+      if (item.retirou === 'SIM' || (valorItem === 0 && item.retirou !== 'NÃO')) {
         resumo[chave].totalRetiradas += 1;
       }
     });
 
-    return Object.keys(resumo).map(chave => {
+    let lista = Object.keys(resumo).map(chave => {
       const dados = resumo[chave];
       const totalBruto = dados.totalCompradoBruto;
       
-      const totalBandanasGanhasBruto = Math.floor(totalBruto / 150);
-      const bandanasDisponiveis = Math.max(0, totalBandanasGanhasBruto - dados.totalRetiradas);
+      const totalBrindesGanho = Math.floor(totalBruto / 150);
+      const brindesDisponiveis = Math.max(0, totalBrindesGanho - dados.totalRetiradas);
       
-      // Sobra do ciclo de R$ 150
       const saldoSobraCiclo = totalBruto % 150;
-      
-      // Ajuste de cálculo para quanto falta para o próximo brinde
-      const faltamParaProximo = bandanasDisponiveis > 0 
-        ? 0 
-        : (150 - saldoSobraCiclo);
+      const faltamParaProximo = 150 - saldoSobraCiclo;
 
       return {
         nome: dados.nomeExibicao,
         totalCompradoBruto: totalBruto,
         saldoSobraCiclo,
-        bandanasDisponiveis,
+        brindesDisponiveis,
         faltamParaProximo
       };
     });
-  }, [historicoGeral]);
 
-  // Filtro de Histórico
+    // Filtro de busca na tabela de saldos
+    const termoBusca = normalizarNome(buscaSaldo);
+    if (termoBusca) {
+      lista = lista.filter(item => normalizarNome(item.nome).includes(termoBusca));
+    }
+
+    // Ordenação A-Z / Z-A
+    lista.sort((a, b) => {
+      const nomeA = normalizarNome(a.nome);
+      const nomeB = normalizarNome(b.nome);
+
+      if (ordemSaldo === 'az') {
+        return nomeA.localeCompare(nomeB);
+      } else {
+        return nomeB.localeCompare(nomeA);
+      }
+    });
+
+    return lista;
+  }, [historicoGeral, buscaSaldo, ordemSaldo]);
+
+  // Filtro da tabela de histórico
   const historicoFiltrado = useMemo(() => {
     const termoNormalizado = normalizarNome(pesquisa);
     if (!termoNormalizado) return historicoGeral;
@@ -167,7 +187,7 @@ export default function Fidelidade() {
     <div className="fidelidade-container">
       <header className="fidelidade-header">
         <h1>Painel de Fidelidade</h1>
-        <p>A cada R$ 150,00 em compras, o cliente ganha um brinde!</p>
+        <p>A cada R$ 150,00 acumulados em compras, o cliente ganha um brinde!</p>
       </header>
 
       <div className="fidelidade-conteudo">
@@ -212,56 +232,80 @@ export default function Fidelidade() {
         </section>
 
         <section className="secao-saldos">
-          <h2>Saldos e Premiações Ativas</h2>
+          <div className="saldos-header-acoes">
+            <h2>Saldos e Premiações Ativas</h2>
+            <div className="controles-saldos">
+              <input 
+                type="text"
+                placeholder="🔍 Pesquisar cliente..."
+                value={buscaSaldo}
+                onChange={(e) => setBuscaSaldo(e.target.value)}
+                className="input-busca-saldos"
+              />
+              <select 
+                value={ordemSaldo} 
+                onChange={(e) => setOrdemSaldo(e.target.value)}
+                className="select-ordem-saldos"
+              >
+                <option value="az">Nome (A - Z)</option>
+                <option value="za">Nome (Z - A)</option>
+              </select>
+            </div>
+          </div>
+
           <div className="tabela-wrapper">
             <table className="tabela-fidelidade">
               <thead>
                 <tr>
                   <th>Cliente</th>
-                  <th>Sobra p/ Próximo Brinde</th>
-                  <th>Faltam para Prêmio</th>
-                  <th>Prêmios Disponíveis</th>
+                  <th>Total Acumulado</th>
+                  <th>Saldo no Ciclo</th>
+                  <th>Faltam para Brinde</th>
+                  <th>Brindes Disponíveis</th>
                   <th>Ação</th>
                 </tr>
               </thead>
               <tbody>
                 {carregando ? (
                   <tr>
-                    <td colSpan="5" className="sem-dados">Buscando dados no Supabase...</td>
+                    <td colSpan="6" className="sem-dados">Buscando dados no Supabase...</td>
                   </tr>
                 ) : resumoClientes.length === 0 ? (
                   <tr>
-                    <td colSpan="5" className="sem-dados">Nenhum cliente com compras registradas.</td>
+                    <td colSpan="6" className="sem-dados">
+                      {buscaSaldo ? 'Nenhum cliente encontrado.' : 'Nenhum cliente registrado.'}
+                    </td>
                   </tr>
                 ) : (
                   resumoClientes.map((item) => (
                     <tr 
                       key={item.nome}
-                      className={item.bandanasDisponiveis > 0 ? 'linha-destaque-premio' : ''}
+                      className={item.brindesDisponiveis > 0 ? 'linha-destaque-premio' : ''}
                     >
                       <td className="col-nome">{item.nome}</td>
+                      <td>R$ {item.totalCompradoBruto.toFixed(2)}</td>
                       <td>R$ {item.saldoSobraCiclo.toFixed(2)}</td>
                       <td>
-                        {item.bandanasDisponiveis > 0 ? (
-                          <span className="badge-meta">Prêmio Liberado!</span>
+                        {item.brindesDisponiveis > 0 ? (
+                          <span className="badge-meta">Meta Atingida!</span>
                         ) : (
                           `R$ ${item.faltamParaProximo.toFixed(2)}`
                         )}
                       </td>
                       <td>
-                        {item.bandanasDisponiveis > 0 ? (
-                          <span className="badge-premio">{item.bandanasDisponiveis} brinde(s) 🎁</span>
+                        {item.brindesDisponiveis > 0 ? (
+                          <span className="badge-premio">{item.brindesDisponiveis} brinde(s) 🎁</span>
                         ) : (
                           <span className="sem-premio">Nenhum</span>
                         )}
                       </td>
                       <td>
                         <button
-                          disabled={item.bandanasDisponiveis === 0}
-                          onClick={() => handleRetirarBandana(item.nome)}
+                          disabled={item.brindesDisponiveis === 0}
+                          onClick={() => handleRetirarBrinde(item.nome)}
                           className="btn-entregar"
                         >
-                          Marcar como Entregue
+                          Entregar Brinde
                         </button>
                       </td>
                     </tr>
@@ -275,7 +319,7 @@ export default function Fidelidade() {
 
       <footer className="secao-historico">
         <div className="historico-header-acoes">
-          <h2>Histórico de Movimentações (Linha a Linha)</h2>
+          <h2>Histórico de Movimentações</h2>
           <div className="busca-wrapper">
             <input 
               type="text"
@@ -293,7 +337,7 @@ export default function Fidelidade() {
               <tr>
                 <th>Data Movimento</th>
                 <th>Cliente</th>
-                <th>Tipo de Evento</th>
+                <th>Evento</th>
                 <th>Valor / Detalhe</th>
               </tr>
             </thead>
@@ -305,30 +349,33 @@ export default function Fidelidade() {
               ) : historicoFiltrado.length === 0 ? (
                 <tr>
                   <td colSpan="4" className="sem-dados">
-                    {pesquisa ? 'Nenhum resultado encontrado para esta busca.' : 'Nenhuma movimentação registrada.'}
+                    {pesquisa ? 'Nenhum resultado encontrado.' : 'Nenhuma movimentação registrada.'}
                   </td>
                 </tr>
               ) : (
-                historicoFiltrado.map(mov => (
-                  <tr key={mov.id} className={mov.tipo === 'RETIRADA' ? 'linha-retirada' : ''}>
-                    <td>{mov.data ? mov.data.split('-').reverse().join('/') : ''}</td>
-                    <td>{mov.cliente}</td>
-                    <td>
-                      {mov.tipo === 'COMPRA' ? (
-                        <span style={{ color: '#2563eb', fontWeight: 500 }}>🛒 Compra</span>
-                      ) : (
-                        <span style={{ color: '#16a34a', fontWeight: 600 }}>🎁 Entrega de Brinde</span>
-                      )}
-                    </td>
-                    <td>
-                      {mov.tipo === 'COMPRA' ? (
-                        `R$ ${Number(mov.valor).toFixed(2)}`
-                      ) : (
-                        <strong style={{ color: '#16a34a' }}>Brinde Entregue</strong>
-                      )}
-                    </td>
-                  </tr>
-                ))
+                historicoFiltrado.map(mov => {
+                  const ehRetirada = mov.retirou === 'SIM' || (Number(mov.valor_compra) === 0);
+                  return (
+                    <tr key={mov.id} className={ehRetirada ? 'linha-retirada' : ''}>
+                      <td>{mov.data ? mov.data.split('-').reverse().join('/') : ''}</td>
+                      <td>{mov.cliente}</td>
+                      <td>
+                        {!ehRetirada ? (
+                          <span style={{ color: '#2563eb', fontWeight: 500 }}>🛒 Compra</span>
+                        ) : (
+                          <span style={{ color: '#16a34a', fontWeight: 600 }}>🎁 Brinde Entregue</span>
+                        )}
+                      </td>
+                      <td>
+                        {!ehRetirada ? (
+                          `R$ ${Number(mov.valor_compra || 0).toFixed(2)}`
+                        ) : (
+                          <strong style={{ color: '#16a34a' }}>Brinde Entregue</strong>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })
               )}
             </tbody>
           </table>

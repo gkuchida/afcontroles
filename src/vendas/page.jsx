@@ -20,7 +20,6 @@ export default function Vendas() {
     quantidade: 1,
     caracteristicas: '',
     valor_unitario: '',
-    valor_total: 0,
     custo_venda: 0,
     lucro_venda: 0,
     forma_pagamento: 'Pix',
@@ -42,7 +41,6 @@ export default function Vendas() {
 
     setFormData((prev) => ({
       ...prev,
-      valor_total: total.toFixed(2),
       lucro_venda: lucro.toFixed(2)
     }));
   }, [formData.quantidade, formData.valor_unitario, formData.custo_venda]);
@@ -58,6 +56,7 @@ export default function Vendas() {
   async function carregarDados() {
     try {
       setLoading(true);
+
       const [
         { data: cliData },
         { data: petsData },
@@ -67,7 +66,7 @@ export default function Vendas() {
         supabase.from('clientes').select('*').order('nome'),
         supabase.from('pets').select('*').order('nome'),
         supabase.from('produtos').select('*, categorias(nome), modelos(nome), tamanhos(nome)').order('created_at', { ascending: false }),
-        supabase.from('vendas').select('*, clientes(nome), pets(nome), produtos(modelos(nome), tamanhos(nome))').order('data_venda', { ascending: false })
+        supabase.from('vendas').select('*').order('created_at', { ascending: false })
       ]);
 
       if (cliData) setClientes(cliData);
@@ -111,7 +110,6 @@ export default function Vendas() {
     }
   };
 
-  // Prepara formulário para edição de venda (ex: encomenda vinda da tela de produção)
   const handleEditar = (v) => {
     setEditandoId(v.id);
     setFormData({
@@ -120,9 +118,8 @@ export default function Vendas() {
       pet_id: v.pet_id || '',
       produto_id: v.produto_id || '',
       quantidade: v.quantidade || 1,
-      caracteristicas: v.caracteristicas || '',
+      caracteristicas: v.caracteristicas || v.produto || '',
       valor_unitario: v.valor_unitario || '',
-      valor_total: v.valor_total || 0,
       custo_venda: v.custo_venda || 0,
       lucro_venda: v.lucro_venda || 0,
       forma_pagamento: v.forma_pagamento || 'Pix',
@@ -141,7 +138,6 @@ export default function Vendas() {
       quantidade: 1,
       caracteristicas: '',
       valor_unitario: '',
-      valor_total: 0,
       custo_venda: 0,
       lucro_venda: 0,
       forma_pagamento: 'Pix',
@@ -155,15 +151,19 @@ export default function Vendas() {
     setLoading(true);
 
     try {
+      const clienteObj = clientes.find((c) => String(c.id) === String(formData.cliente_id));
+      const petObj = todosPets.find((p) => String(p.id) === String(formData.pet_id));
+      const prodObj = produtos.find((p) => String(p.id) === String(formData.produto_id));
+
       const payloadVenda = {
         data_venda: formData.data_venda,
-        cliente_id: formData.cliente_id || null,
-        pet_id: formData.pet_id || null,
-        produto_id: formData.produto_id || null,
-        quantidade: parseInt(formData.quantidade, 10) || 1,
+        cliente: clienteObj ? clienteObj.nome : null,
+        pet: petObj ? petObj.nome : null,
+        produto: prodObj ? prodObj.modelos?.nome : formData.caracteristicas?.trim() || 'Encomenda',
+        tamanho: prodObj?.tamanhos?.nome || null,
+        quantidade: parseFloat(formData.quantidade) || 1,
         caracteristicas: formData.caracteristicas?.trim() || null,
         valor_unitario: parseFloat(formData.valor_unitario) || 0,
-        valor_total: parseFloat(formData.valor_total) || 0,
         custo_venda: parseFloat(formData.custo_venda) || 0,
         lucro_venda: parseFloat(formData.lucro_venda) || 0,
         forma_pagamento: formData.forma_pagamento,
@@ -172,19 +172,18 @@ export default function Vendas() {
       };
 
       if (editandoId) {
-        // Atualiza venda existente (ex: ajuste de encomenda)
         const { error: errUpdate } = await supabase
           .from('vendas')
           .update(payloadVenda)
           .eq('id', editandoId);
         if (errUpdate) throw errUpdate;
       } else {
-        // Cria nova venda
         const { error: errInsert } = await supabase.from('vendas').insert([payloadVenda]);
         if (errInsert) throw errInsert;
 
-        // Se for venda de produto em estoque (não-encomenda), atualiza o item em Produção com Cliente, Pet e Status 'Vendido'
-        if (formData.produto_id) {
+        const isEncomenda = prodObj?.categorias?.nome?.toLowerCase().includes('encomenda');
+        
+        if (formData.produto_id && !isEncomenda) {
           await supabase
             .from('produtos')
             .update({
@@ -196,12 +195,12 @@ export default function Vendas() {
         }
       }
 
-      alert(editandoId ? 'Venda atualizada!' : 'Venda registrada e produção atualizada!');
+      alert(editandoId ? 'Venda atualizada!' : 'Venda registrada com sucesso!');
       resetForm();
       await carregarDados();
     } catch (err) {
       console.error('Erro ao salvar venda:', err);
-      alert(`Erro: ${err.message}`);
+      alert(`Erro ao salvar: ${err.message}`);
     } finally {
       setLoading(false);
     }
@@ -214,7 +213,6 @@ export default function Vendas() {
       </h2>
 
       <form onSubmit={handleSubmit} className="estoque-card">
-        {/* CAMPOS DE FORMULÁRIO */}
         <div className="form-grid">
           <div className="form-group">
             <label>Data da Venda:</label>
@@ -262,17 +260,17 @@ export default function Vendas() {
         <h4 style={{ marginTop: '20px' }}>Detalhes do Produto</h4>
         <div className="form-grid">
           <div className="form-group">
-            <label>Produto de Origem:</label>
+            <label>Produto de Origem (Estoque):</label>
             <select
               name="produto_id"
               value={formData.produto_id}
               onChange={handleProdutoChange}
               className="select-customizado"
             >
-              <option value="">Selecione o produto...</option>
+              <option value="">Selecione (ou deixe em branco p/ Encomenda)...</option>
               {produtos.map((p) => (
                 <option key={p.id} value={p.id}>
-                  {p.modelos?.nome} - Tam: {p.tamanhos?.nome} - {p.tecido || 'S/ Tecido'}
+                  [{p.categorias?.nome || 'Geral'}] {p.modelos?.nome} - Tam: {p.tamanhos?.nome} - {p.tecido || 'S/ Tecido'}
                 </option>
               ))}
             </select>
@@ -292,13 +290,14 @@ export default function Vendas() {
           </div>
 
           <div className="form-group">
-            <label>Características / Detalhes:</label>
+            <label>Características / Detalhes / Encomenda:</label>
             <input
               type="text"
               name="caracteristicas"
               value={formData.caracteristicas}
               onChange={handleChange}
               className="input-customizado"
+              placeholder="Ex: Vestido Fleece Rosa Tamanho G"
             />
           </div>
         </div>
@@ -315,11 +314,6 @@ export default function Vendas() {
               className="input-customizado"
               required
             />
-          </div>
-
-          <div className="form-group">
-            <label>Valor Total (R$):</label>
-            <input type="text" value={`R$ ${formData.valor_total}`} className="input-customizado" readOnly />
           </div>
 
           <div className="form-group">
@@ -382,53 +376,60 @@ export default function Vendas() {
         </div>
       </form>
 
-      {/* TABELA COM BOTAO DE EDITAR */}
+      {/* TABELA DE HISTÓRICO */}      
       <div className="historico-card" style={{ marginTop: '30px', padding: '20px', backgroundColor: '#fff', borderRadius: '8px' }}>
         <h3>Histórico de Vendas</h3>
-        <div className="historico-table-container">
-          <table className="historico-table" style={{ width: '100%', borderCollapse: 'collapse', minWidth: '1200px', fontSize: '13px' }}>
+        <div className="historico-table-container" style={{ overflowX: 'auto' }}>
+          <table className="historico-table" style={{ width: '100%', borderCollapse: 'collapse', minWidth: '1100px', fontSize: '13px', tableLayout: 'fixed' }}>
             <thead>
-              <tr style={{ borderBottom: '2px solid #dee2e6' }}>
-                <th>Ação</th>
-                <th>Data</th>
-                <th>Cliente</th>
-                <th>Pet</th>
-                <th>Produto</th>
-                <th>Qtd</th>
-                <th>Val. Unitário</th>
-                <th>Val. Total</th>
-                <th>Custo</th>
-                <th>Lucro</th>
-                <th>Pagamento</th>
-                <th>Canal</th>
-                <th>Obs.</th>
+              <tr style={{ backgroundColor: '#f8f9fa', borderBottom: '2px solid #dee2e6' }}>
+                <th style={{ padding: '10px 8px', textAlign: 'center', width: '60px' }}>Ação</th>
+                <th style={{ padding: '10px 8px', textAlign: 'left', width: '90px' }}>Data</th>
+                <th style={{ padding: '10px 8px', textAlign: 'left', width: '120px' }}>Cliente</th>
+                <th style={{ padding: '10px 8px', textAlign: 'left', width: '100px' }}>Pet</th>
+                <th style={{ padding: '10px 8px', textAlign: 'left', width: '180px' }}>Produto</th>
+                <th style={{ padding: '10px 8px', textAlign: 'center', width: '70px' }}>Tamanho</th>
+                <th style={{ padding: '10px 8px', textAlign: 'center', width: '50px' }}>Qtd</th>
+                <th style={{ padding: '10px 8px', textAlign: 'right', width: '100px' }}>Val. Unitário</th>
+                <th style={{ padding: '10px 8px', textAlign: 'right', width: '90px' }}>Custo</th>
+                <th style={{ padding: '10px 8px', textAlign: 'right', width: '90px' }}>Lucro</th>
+                <th style={{ padding: '10px 8px', textAlign: 'left', width: '100px' }}>Pagamento</th>
+                <th style={{ padding: '10px 8px', textAlign: 'left', width: '90px' }}>Canal</th>
+                <th style={{ padding: '10px 8px', textAlign: 'left', width: '120px' }}>Obs.</th>
               </tr>
             </thead>
             <tbody>
-              {vendas.map((v) => (
-                <tr key={v.id} style={{ borderBottom: '1px solid #ddd' }}>
-                  <td style={{ padding: '8px', textAlign: 'center' }}>
-                    <button
-                      onClick={() => handleEditar(v)}
-                      style={{ padding: '4px 8px', fontSize: '11px', cursor: 'pointer' }}
-                    >
-                      Editar
-                    </button>
-                  </td>
-                  <td style={{ padding: '8px' }}>{v.data_venda ? new Date(v.data_venda).toLocaleDateString('pt-BR', { timeZone: 'UTC' }) : '-'}</td>
-                  <td style={{ padding: '8px' }}>{v.clientes?.nome || '-'}</td>
-                  <td style={{ padding: '8px' }}>{v.pets?.nome || '-'}</td>
-                  <td style={{ padding: '8px' }}>{v.produtos?.modelos?.nome ? `${v.produtos.modelos.nome} (${v.produtos.tamanhos?.nome || '-'})` : v.caracteristicas || '-'}</td>
-                  <td style={{ padding: '8px', textAlign: 'center' }}>{v.quantidade}</td>
-                  <td style={{ padding: '8px', textAlign: 'right' }}>R$ {Number(v.valor_unitario).toFixed(2)}</td>
-                  <td style={{ padding: '8px', textAlign: 'right', fontWeight: 'bold' }}>R$ {Number(v.valor_total).toFixed(2)}</td>
-                  <td style={{ padding: '8px', textAlign: 'right', color: '#dc3545' }}>R$ {Number(v.custo_venda).toFixed(2)}</td>
-                  <td style={{ padding: '8px', textAlign: 'right', color: '#28a745', fontWeight: 'bold' }}>R$ {Number(v.lucro_venda).toFixed(2)}</td>
-                  <td style={{ padding: '8px' }}>{v.forma_pagamento}</td>
-                  <td style={{ padding: '8px' }}>{v.canal_venda}</td>
-                  <td style={{ padding: '8px' }}>{v.observacao || '-'}</td>
-                </tr>
-              ))}
+              {vendas.map((v, index) => {
+                const bgCor = index % 2 === 0 ? '#ffffff' : '#f4f6f8';
+                return (
+                  <tr key={v.id} style={{ backgroundColor: bgCor, borderBottom: '1px solid #e9ecef' }}>
+                    <td style={{ padding: '8px', textAlign: 'center' }}>
+                      <button
+                        type="button"
+                        onClick={() => handleEditar(v)}
+                        className="btn-icon-editar"
+                        title="Editar Venda"
+                      >
+                        ✏️
+                      </button>
+                    </td>
+                    <td style={{ padding: '8px', textAlign: 'left' }}>
+                      {v.data_venda ? new Date(v.data_venda).toLocaleDateString('pt-BR', { timeZone: 'UTC' }) : '-'}
+                    </td>
+                    <td style={{ padding: '8px', textAlign: 'left' }}>{v.cliente || '-'}</td>
+                    <td style={{ padding: '8px', textAlign: 'left' }}>{v.pet || '-'}</td>
+                    <td style={{ padding: '8px', textAlign: 'left' }}>{v.produto || v.caracteristicas || '-'}</td>
+                    <td style={{ padding: '8px', textAlign: 'center' }}>{v.tamanho || '-'}</td>
+                    <td style={{ padding: '8px', textAlign: 'center' }}>{v.quantidade || 1}</td>
+                    <td style={{ padding: '8px', textAlign: 'right' }}>R$ {Number(v.valor_unitario || 0).toFixed(2)}</td>
+                    <td style={{ padding: '8px', textAlign: 'right', color: '#dc3545' }}>R$ {Number(v.custo_venda || 0).toFixed(2)}</td>
+                    <td style={{ padding: '8px', textAlign: 'right', color: '#28a745', fontWeight: 'bold' }}>R$ {Number(v.lucro_venda || 0).toFixed(2)}</td>
+                    <td style={{ padding: '8px', textAlign: 'left' }}>{v.forma_pagamento || '-'}</td>
+                    <td style={{ padding: '8px', textAlign: 'left' }}>{v.canal_venda || '-'}</td>
+                    <td style={{ padding: '8px', textAlign: 'left' }}>{v.observacao || '-'}</td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>

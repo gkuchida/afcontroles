@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../supabaseCliente';
 import './estoque.css';
@@ -51,6 +51,10 @@ export default function CadastroEstoque() {
   const [outroMaterial, setOutroMaterial] = useState('');
   const [editingId, setEditingId] = useState(null);
 
+  // Filtros da Tabela
+  const [buscaEstoque, setBuscaEstoque] = useState('');
+  const [ordemEstoque, setOrdemEstoque] = useState('az');
+
   const [categorias, setCategorias] = useState([]);
   const [materiais, setMateriais] = useState([]);
   const [cores, setCores] = useState([]);
@@ -76,6 +80,14 @@ export default function CadastroEstoque() {
     fetchEstoque();
     fetchOpcoes();
   }, []);
+
+  const normalizarTexto = (texto) => {
+    if (!texto) return '';
+    return texto
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "");
+  };
 
   useEffect(() => {
     const valorMaterial = formData.material === 'Outros' ? outroMaterial : formData.material;
@@ -166,6 +178,36 @@ export default function CadastroEstoque() {
       setLoading(false);
     }
   }
+
+  // Filtro de Busca e Ordenação
+  const itensFiltrados = useMemo(() => {
+    let lista = [...itens];
+
+    const termo = normalizarTexto(buscaEstoque);
+    if (termo) {
+      lista = lista.filter(item => 
+        normalizarTexto(item.descricao).includes(termo) ||
+        normalizarTexto(item.material).includes(termo) ||
+        normalizarTexto(item.categoria).includes(termo) ||
+        normalizarTexto(item.cor).includes(termo) ||
+        normalizarTexto(item.estampa).includes(termo) ||
+        normalizarTexto(item.loja).includes(termo)
+      );
+    }
+
+    lista.sort((a, b) => {
+      const nomeA = normalizarTexto(a.descricao || a.material);
+      const nomeB = normalizarTexto(b.descricao || b.material);
+
+      if (ordemEstoque === 'az') {
+        return nomeA.localeCompare(nomeB);
+      } else {
+        return nomeB.localeCompare(nomeA);
+      }
+    });
+
+    return lista;
+  }, [itens, buscaEstoque, ordemEstoque]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -307,7 +349,6 @@ export default function CadastroEstoque() {
       <h2 className="estoque-title">Controle de Estoque</h2>
 
       <form onSubmit={handleSubmit} className="estoque-card">
-        
         <div className="estoque-card-header">
           <h3 className="estoque-card-title">
             {editingId ? 'Editar Item do Estoque' : 'Adicionar Novo Item'}
@@ -486,7 +527,30 @@ export default function CadastroEstoque() {
         </div>
       </form>
 
-      <h3 className="estoque-card-title" style={{ border: 'none', marginBottom: '12px' }}>Itens no Estoque</h3>
+      {/* Cabeçalho da Tabela com Pesquisa e Filtros */}
+      <div className="estoque-tabela-header">
+        <h3 className="estoque-card-title" style={{ border: 'none', margin: 0 }}>
+          Itens no Estoque
+        </h3>
+        
+        <div className="controles-estoque">
+          <input 
+            type="text"
+            placeholder="🔍 Pesquisar material, cor, loja..."
+            value={buscaEstoque}
+            onChange={(e) => setBuscaEstoque(e.target.value)}
+            className="input-busca-estoque"
+          />
+          <select 
+            value={ordemEstoque} 
+            onChange={(e) => setOrdemEstoque(e.target.value)}
+            className="select-ordem-estoque"
+          >
+            <option value="az">Nome (A - Z)</option>
+            <option value="za">Nome (Z - A)</option>
+          </select>
+        </div>
+      </div>
 
       <div className="tabela-div-container">
         <div className="tabela-div">
@@ -507,13 +571,16 @@ export default function CadastroEstoque() {
             <div className="col-acoes">Ações</div>
           </div>
 
-          {itens.length === 0 ? (
+          {itensFiltrados.length === 0 ? (
             <div className="tabela-vazia">
-              {loading ? 'Carregando itens...' : 'Nenhum item cadastrado.'}
+              {loading ? 'Carregando itens...' : buscaEstoque ? 'Nenhum item encontrado na busca.' : 'Nenhum item cadastrado.'}
             </div>
           ) : (
-            itens.map((item) => (
-              <div key={item.id} className={`tabela-linha ${editingId === item.id ? 'linha-em-edicao' : ''}`}>
+            itensFiltrados.map((item, index) => (
+              <div 
+                key={item.id} 
+                className={`tabela-linha ${index % 2 === 0 ? 'linha-par' : 'linha-impar'} ${editingId === item.id ? 'linha-em-edicao' : ''}`}
+              >
                 <div className="col-cat" data-label="Categoria">{item.categoria || '-'}</div>
                 <div className="col-mat" data-label="Material">{item.material || '-'}</div>
                 <div className="col-cor" data-label="Cor">{item.cor || '-'}</div>

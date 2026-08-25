@@ -1,221 +1,246 @@
-// src/dashboard/page.jsx
-import React, { useState, useEffect } from 'react';
-import { LayoutDashboard, Calendar, Shirt, Ruler, PackageCheck } from 'lucide-react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { supabase } from '../supabaseCliente';
 import './dashboard.css';
 
 export default function Dashboard() {
-  const [metricas, setMetricas] = useState({
-    melhorMesAno: 'Carregando...',
-    quantidadeVendas: 0,
-    modeloMaisVendido: 'Carregando...',
-    tamanhoMaisVendido: 'Carregando...'
+  const [produtosEstoque, setProdutosEstoque] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [kpis, setKpis] = useState({
+    melhorMesAno: { mesAno: '-', qtd: 0 },
+    modeloMaisVendido: { modelo: '-', qtd: 0 },
+    tamanhoMaisVendido: { tamanho: '-', qtd: 0 }
   });
 
-  const [produtosEstoque, setProdutosEstoque] = useState([]);
-  const [loadingEstoque, setLoadingEstoque] = useState(true);
+  // Estados dos Filtros
+  const [busca, setBusca] = useState('');
+  const [filtroModelo, setFiltroModelo] = useState('');
+  const [filtroTamanho, setFiltroTamanho] = useState('');
 
   useEffect(() => {
     async function carregarDashboard() {
       try {
-        setLoadingEstoque(true);
+        setLoading(true);
 
-        // 1. BUSCA DADOS EM PARALELO NAS TABELAS
-        const [resVendas, resProdutos, resModelos, resTamanhos] = await Promise.all([
-          supabase.from('vendas').select('*'),
-          supabase.from('produtos').select('*'),
-          supabase.from('modelos').select('*'),
-          supabase.from('tamanhos').select('*')
-        ]);
+        const { data: produtos, error: errProdutos } = await supabase
+          .from('produtos')
+          .select('*');
 
-        // Mapeamento rápido de IDs para Nomes
-        const mapaModelos = {};
-        (resModelos.data || []).forEach(m => { mapaModelos[m.id] = m.nome; });
+        if (errProdutos) throw errProdutos;
 
-        const mapaTamanhos = {};
-        (resTamanhos.data || []).forEach(t => { mapaTamanhos[t.id] = t.nome; });
-
-        const mapaProdutos = {};
-        (resProdutos.data || []).forEach(p => { mapaProdutos[p.id] = p; });
-
-        // --- 2. PROCESSA MÉTRICAS DE VENDAS ---
-        const vendas = resVendas.data || [];
-        if (vendas.length > 0) {
-          const agrupadoPorMes = {};
-          const contagemModelos = {};
-          const contagemTamanhos = {};
-
-          vendas.forEach(venda => {
-            const qtd = Number(venda.quantidade) || 1;
-            const dataVenda = venda.data_venda || venda.created_at;
-            
-            const prod = mapaProdutos[venda.produto_id];
-            const nomeModelo = prod ? mapaModelos[prod.modelo_id] || 'Outros' : 'Outros';
-            const nomeTamanho = prod ? mapaTamanhos[prod.tamanho_id] || '-' : '-';
-
-            if (dataVenda) {
-              const partesData = String(dataVenda).split('T')[0].split('-');
-              if (partesData.length >= 2) {
-                const mesAno = `${partesData[1]}/${partesData[0]}`;
-                agrupadoPorMes[mesAno] = (agrupadoPorMes[mesAno] || 0) + qtd;
-              }
-            }
-
-            contagemModelos[nomeModelo] = (contagemModelos[nomeModelo] || 0) + qtd;
-            contagemTamanhos[nomeTamanho] = (contagemTamanhos[nomeTamanho] || 0) + qtd;
-          });
-
-          let melhorMesAno = 'Sem dados', maxVendasMes = 0;
-          Object.entries(agrupadoPorMes).forEach(([mes, total]) => {
-            if (total > maxVendasMes) { maxVendasMes = total; melhorMesAno = mes; }
-          });
-
-          let modeloMaisVendido = 'Sem dados', maxModelo = 0;
-          Object.entries(contagemModelos).forEach(([mod, total]) => {
-            if (total > maxModelo) { maxModelo = total; modeloMaisVendido = mod; }
-          });
-
-          let tamanhoMaisVendido = 'Sem dados', maxTamanho = 0;
-          Object.entries(contagemTamanhos).forEach(([tam, total]) => {
-            if (total > maxTamanho) { maxTamanho = total; tamanhoMaisVendido = tam; }
-          });
-
-          setMetricas({
-            melhorMesAno,
-            quantidadeVendas: maxVendasMes,
-            modeloMaisVendido,
-            tamanhoMaisVendido
-          });
-        } else {
-          setMetricas({
-            melhorMesAno: 'Nenhuma venda',
-            quantidadeVendas: 0,
-            modeloMaisVendido: 'Nenhum',
-            tamanhoMaisVendido: 'Nenhum'
-          });
-        }
-
-        // --- 3. PROCESSA PRODUTOS FILTRANDO POR ESTOQUE = "SIM" ---
-        const produtos = resProdutos.data || [];
-        
-        const listaFormatada = produtos
+        const produtosEmEstoque = (produtos || [])
           .filter(item => {
-            const statusEstoque = String(item.estoque || '').trim().toLowerCase();
-            return statusEstoque === 'sim'; // Verifica se a coluna estoque é igual a "sim"
+            if (item.estoque === null || item.estoque === undefined) return false;
+            const valorEstoque = String(item.estoque).trim().toUpperCase();
+            return valorEstoque === 'SIM' || item.estoque === true || item.estoque === 1;
           })
           .map(item => ({
-            id: item.id,
-            modelo: mapaModelos[item.modelo_id] || 'Sem Modelo',
-            tamanho: mapaTamanhos[item.tamanho_id] || '-',
-            material: item.tecido || item.observacao || '-',
-            vendaSugerida: Number(item.valor_venda) || 0
+            id: item.id || Math.random(),
+            modelo: item.modelo || item.descricao || item.produto || item.nome || 'Peça Pronta',
+            tamanho: item.tamanho || '-',
+            material: item.material || item.tecido || item.observacao || '-',
+            vendaSugerida: Number(item.vender_por || item.venda || item.valor_venda || item.preco || 0)
           }));
 
-        setProdutosEstoque(listaFormatada);
+        setProdutosEstoque(produtosEmEstoque);
+
+        // 2. Cálculo dos Cards do Topo (Com fallbacks para nome de colunas)
+      const { data: vendas } = await supabase.from('vendas').select('*');
+      const fonteDados = (vendas && vendas.length > 0) ? vendas : (produtos || []);
+
+      if (fonteDados.length > 0) {
+        const contagemModelos = {};
+        const contagemTamanhos = {};
+        const contagemMeses = {};
+
+        fonteDados.forEach(item => {
+          // Busca o modelo tentando todos os nomes de colunas possíveis
+          const mod = item.modelo || item.Modelo || item.descricao || item.Descricao || item.produto || item.nome;
+          if (mod && String(mod).trim() !== '' && String(mod).trim() !== '-') {
+            const modeloFormatado = String(mod).trim();
+            contagemModelos[modeloFormatado] = (contagemModelos[modeloFormatado] || 0) + 1;
+          }
+
+          // Busca o tamanho
+          const tam = item.tamanho || item.Tamanho;
+          if (tam && String(tam).trim() !== '' && String(tam).trim() !== '-') {
+            const tamanhoFormatado = String(tam).trim();
+            contagemTamanhos[tamanhoFormatado] = (contagemTamanhos[tamanhoFormatado] || 0) + 1;
+          }
+
+          // Busca a data
+          const dataItem = item.data_venda || item.created_at || item.data;
+          if (dataItem) {
+            const d = new Date(dataItem);
+            if (!isNaN(d.getTime())) {
+              const mesAno = `${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
+              contagemMeses[mesAno] = (contagemMeses[mesAno] || 0) + 1;
+            }
+          }
+        });
+
+        const getMaior = (obj) => {
+          const entries = Object.entries(obj);
+          if (entries.length === 0) return ['-', 0];
+          return entries.reduce((max, curr) => curr[1] > max[1] ? curr : max, ['-', 0]);
+        };
+
+        const [topModelo, qtdModelo] = getMaior(contagemModelos);
+        const [topTamanho, qtdTamanho] = getMaior(contagemTamanhos);
+        const [topMes, qtdMes] = getMaior(contagemMeses);
+
+        setKpis({
+          melhorMesAno: { mesAno: topMes, qtd: qtdMes },
+          modeloMaisVendido: { modelo: topModelo, qtd: qtdModelo },
+          tamanhoMaisVendido: { tamanho: topTamanho, qtd: qtdTamanho }
+        });
+      }
 
       } catch (err) {
-        console.error("Erro geral no dashboard:", err);
-        setMetricas({
-          melhorMesAno: 'Erro no banco',
-          quantidadeVendas: 0,
-          modeloMaisVendido: 'Erro no banco',
-          tamanhoMaisVendido: 'Erro no banco'
-        });
+        console.error("Erro ao carregar Dashboard:", err);
       } finally {
-        setLoadingEstoque(false);
+        setLoading(false);
       }
     }
 
     carregarDashboard();
   }, []);
 
+  // Listas de opções dinâmicas para os Selects
+  const listaModelos = useMemo(() => {
+    const modelos = produtosEstoque.map(p => p.modelo).filter(Boolean);
+    return Array.from(new Set(modelos)).sort();
+  }, [produtosEstoque]);
+
+  const listaTamanhos = useMemo(() => {
+    const tamanhos = produtosEstoque.map(p => p.tamanho).filter(t => t && t !== '-');
+    return Array.from(new Set(tamanhos)).sort();
+  }, [produtosEstoque]);
+
+  // Aplicação dos Filtros em tempo real
+  const produtosFiltrados = useMemo(() => {
+    return produtosEstoque.filter(item => {
+      const termoBusca = busca.toLowerCase();
+      const bateuBusca = 
+        item.modelo.toLowerCase().includes(termoBusca) ||
+        item.material.toLowerCase().includes(termoBusca) ||
+        item.tamanho.toLowerCase().includes(termoBusca);
+
+      const bateuModelo = filtroModelo === '' || item.modelo === filtroModelo;
+      const bateuTamanho = filtroTamanho === '' || item.tamanho === filtroTamanho;
+
+      return bateuBusca && bateuModelo && bateuTamanho;
+    });
+  }, [produtosEstoque, busca, filtroModelo, filtroTamanho]);
+
   return (
-    <div className="dashboard-container">
+    <div className="dashboard-page">
       
-      {/* Banner Principal */}
-      <div className="dashboard-welcome-box">
-        <div className="welcome-text">
-          <h1>Olá! Bem-vindo ao AF Sistemas</h1>
-          <p>O painel de controle da sua produção está pronto para monitoramento.</p>
+      {/* CARDS KPI */}
+      <div className="kpi-grid">
+        <div className="kpi-card">
+          <div className="kpi-icon-wrapper blue">📅</div>
+          <span className="kpi-title">Melhor Mês/Ano</span>
+          <h3 className="kpi-value">{loading ? "Carregando..." : kpis.melhorMesAno.mesAno}</h3>
+          <span className="kpi-sub">Qtd: {kpis.melhorMesAno.qtd} un</span>
         </div>
-        <div className="welcome-icon-wrapper">
-          <LayoutDashboard size={48} color="white" strokeWidth={1.5} />
+
+        <div className="kpi-card">
+          <div className="kpi-icon-wrapper red">🎽</div>
+          <span className="kpi-title">Modelo Mais Vendido</span>
+          <h3 className="kpi-value">{loading ? "Carregando..." : kpis.modeloMaisVendido.modelo}</h3>
+          <span className="kpi-sub">Qtd: {kpis.modeloMaisVendido.qtd} un</span>
+        </div>
+
+        <div className="kpi-card">
+          <div className="kpi-icon-wrapper green">📐</div>
+          <span className="kpi-title">Tamanho Mais Vendido</span>
+          <h3 className="kpi-value">{loading ? "Carregando..." : kpis.tamanhoMaisVendido.tamanho}</h3>
+          <span className="kpi-sub">Qtd: {kpis.tamanhoMaisVendido.qtd} un</span>
         </div>
       </div>
 
-      {/* Cards de Métricas */}
-      <div className="dashboard-grid">
-        <div className="dashboard-card">
-          <div className="card-icon bg-azul"><Calendar size={22} /></div>
-          <div className="card-info">
-            <h3>Melhor Mês/Ano</h3>
-            <p>{metricas.melhorMesAno}</p>
-            <small style={{ color: '#666', fontWeight: '500' }}>Qtd: {metricas.quantidadeVendas} un</small>
+      {/* TABELA DE ESTOQUE + FILTROS */}
+      <div className="table-card">
+        <div className="table-header">
+          <div className="table-header-icon">📦</div>
+          <div>
+            <h2 className="table-header-title">Resumo de Peças em Estoque (Produção)</h2>
+            <p className="table-header-subtitle">Peças com estoque marcado como SIM</p>
           </div>
         </div>
 
-        <div className="dashboard-card">
-          <div className="card-icon bg-laranja"><Shirt size={22} /></div>
-          <div className="card-info">
-            <h3>Modelo Mais Vendido</h3>
-            <p>{metricas.modeloMaisVendido}</p>
-          </div>
-        </div>
+        {/* BARRA DE FILTROS E PESQUISA */}
+        <div className="filters-bar">
+          <input
+            type="text"
+            className="filter-input"
+            placeholder="🔍 Pesquisar por modelo ou tecido..."
+            value={busca}
+            onChange={(e) => setBusca(e.target.value)}
+          />
 
-        <div className="dashboard-card">
-          <div className="card-icon bg-rosa"><Ruler size={22} /></div>
-          <div className="card-info">
-            <h3>Tamanho Mais Vendido</h3>
-            <p>{metricas.tamanhoMaisVendido}</p>
-          </div>
-        </div>
-      </div>
+          <select
+            className="filter-select"
+            value={filtroModelo}
+            onChange={(e) => setFiltroModelo(e.target.value)}
+          >
+            <option value="">Todos os Modelos</option>
+            {listaModelos.map(mod => (
+              <option key={mod} value={mod}>{mod}</option>
+            ))}
+          </select>
 
-      {/* Resumo de Produção em Estoque */}
-      <div className="dashboard-full-card">
-        <div className="full-card-header">
-          <div className="card-icon bg-verde" style={{ backgroundColor: '#22c55e', color: 'white', padding: '8px', borderRadius: '8px', display: 'flex', alignItems: 'center' }}>
-            <PackageCheck size={22} />
-          </div>
-          <div style={{ marginLeft: '12px' }}>
-            <h3 style={{ margin: 0, fontSize: '1.1rem', color: '#333' }}>Resumo de Peças em Estoque (Produção)</h3>
-            <p style={{ margin: 0, fontSize: '0.85rem', color: '#666' }}>Peças com estoque marcado como SIM</p>
-          </div>
-        </div>
+          <select
+            className="filter-select"
+            value={filtroTamanho}
+            onChange={(e) => setFiltroTamanho(e.target.value)}
+          >
+            <option value="">Todos os Tamanhos</option>
+            {listaTamanhos.map(tam => (
+              <option key={tam} value={tam}>{tam}</option>
+            ))}
+          </select>
 
-        <div className="full-card-body">
-          {loadingEstoque ? (
-            <p className="loading-text">Buscando dados no Supabase...</p>
-          ) : produtosEstoque.length === 0 ? (
-            <p className="empty-text">Nenhuma peça com estoque marcado como "sim" no momento.</p>
-          ) : (
-            /* A div abaixo controla o Scroll */
-            <div className="estoque-table-wrapper">
-              <table className="estoque-table">
-                <thead>
-                  <tr>
-                    <th>Modelo</th>
-                    <th>Tamanho</th>
-                    <th>Material</th>
-                    <th>Venda Sugerida</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {produtosEstoque.map((item) => (
-                    <tr key={item.id}>
-                      <td className="font-bold">{item.modelo}</td>
-                      <td><span className="badge-tamanho">{item.tamanho}</span></td>
-                      <td className="text-muted">{item.material}</td>
-                      <td className="valor-venda">
-                        {item.vendaSugerida.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+          {(busca || filtroModelo || filtroTamanho) && (
+            <button
+              className="clear-filters-btn"
+              onClick={() => { setBusca(''); setFiltroModelo(''); setFiltroTamanho(''); }}
+            >
+              Limpar Filtros
+            </button>
           )}
         </div>
+
+        {loading ? (
+          <p className="empty-state">Buscando dados no Supabase...</p>
+        ) : produtosFiltrados.length === 0 ? (
+          <p className="empty-state">Nenhum produto encontrado com os filtros selecionados.</p>
+        ) : (
+          <div className="custom-table-wrapper">
+            <table className="custom-table">
+              <thead>
+                <tr>
+                  <th>Modelo</th>
+                  <th>Tamanho</th>
+                  <th>Material / Tecido</th>
+                  <th>Venda Sugerida</th>
+                </tr>
+              </thead>
+              <tbody>
+                {produtosFiltrados.map((item) => (
+                  <tr key={item.id}>
+                    <td className="text-bold">{item.modelo}</td>
+                    <td>{item.tamanho}</td>
+                    <td>{item.material}</td>
+                    <td className="text-bold">
+                      R$ {item.vendaSugerida.toFixed(2).replace('.', ',')}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
 
     </div>

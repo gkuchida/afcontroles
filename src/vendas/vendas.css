@@ -110,3 +110,28 @@ button.btn-submit:hover {
   margin-top: 40px;
 }
 
+.historico-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.historico-table th,
+.historico-table td {
+  padding: 8px 10px;
+  vertical-align: middle;
+}
+
+/* Define cor alternada para as linhas */
+.historico-table tbody tr:nth-child(even) {
+  background-color: #f8f9fa;
+}
+
+.historico-table tbody tr:nth-child(odd) {
+  background-color: #ffffff;
+}
+
+.historico-table tbody tr:hover {
+  background-color: #e9ecef;
+}
+

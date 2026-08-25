@@ -273,6 +273,39 @@
 
 .btn-deletar-linha:hover { background: #fee2e2; }
 
+.btn-editar-linha {
+  background-color: #eff6ff;
+  color: #2563eb;
+  border: 1px solid #bfdbfe;
+  padding: 6px;
+  border-radius: 6px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+
+.btn-editar-linha:hover {
+  background-color: #2563eb;
+  color: #ffffff;
+}
+
+.btn-cancelar-edicao {
+  background-color: #f1f5f9;
+  color: #475569;
+  border: 1px solid #cbd5e1;
+  padding: 10px 16px;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-cancelar-edicao:hover {
+  background-color: #e2e8f0;
+}
+
 /* ==========================================================================
    Media Queries para Telas Maiores (Tablets e Desktops)
    ========================================================================== */

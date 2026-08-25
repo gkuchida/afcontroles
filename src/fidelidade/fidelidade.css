@@ -263,6 +263,90 @@
   margin-bottom: 14px;
 }
 
+/* Limita a altura do container de Saldos para ~20 itens com scroll vertical */
+.secao-saldos .tabela-wrapper {
+  max-height: 520px;
+  overflow-y: auto;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+}
+
+/* Mantém o cabeçalho fixo no topo ao rolar a tabela */
+.secao-saldos table thead th {
+  position: sticky;
+  top: 0;
+  background-color: #f8fafc;
+  z-index: 2;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+/* Linhas intercaladas / mescladas (Zebra Striping) para ambas as tabelas */
+.tabela-fidelidade tbody tr:nth-child(even),
+.tabela-historico tbody tr:nth-child(even) {
+  background-color: #f8fafc;
+}
+
+.tabela-fidelidade tbody tr:nth-child(odd),
+.tabela-historico tbody tr:nth-child(odd) {
+  background-color: #ffffff;
+}
+
+/* Efeito ao passar o mouse */
+.tabela-fidelidade tbody tr:hover,
+.tabela-historico tbody tr:hover {
+  background-color: #f1f5f9;
+}
+
+/* Mantém a cor de destaque do prêmio suave mesmo com as linhas mescladas */
+.tabela-fidelidade tbody tr.linha-destaque-premio {
+  background-color: #f0fdf4 !important;
+}
+
+.tabela-historico tbody tr.linha-retirada {
+  background-color: #fefce8 !important;
+}
+
+.saldos-header-acoes {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.controles-saldos {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.input-busca-saldos {
+  padding: 8px 12px;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  outline: none;
+}
+
+.input-busca-saldos:focus {
+  border-color: #2563eb;
+}
+
+.select-ordem-saldos {
+  padding: 8px 12px;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  background-color: #ffffff;
+  cursor: pointer;
+  outline: none;
+}
+
+.select-ordem-saldos:focus {
+  border-color: #2563eb;
+}
+
 @media (min-width: 576px) {
   .historico-header-acoes {
     flex-direction: row;

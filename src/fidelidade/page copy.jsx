@@ -6,15 +6,15 @@ export default function Fidelidade() {
   const [historicoGeral, setHistoricoGeral] = useState([]);
   const [carregando, setCarregando] = useState(true);
 
-  // Estados do formulário de entrada manual
+  // Formulário
   const [cliente, setCliente] = useState('');
   const [valor, setValor] = useState('');
   const [data, setData] = useState(new Date().toISOString().split('T')[0]);
 
-  // Estado para a barra de pesquisa do histórico
+  // Busca do Histórico
   const [pesquisa, setPesquisa] = useState('');
 
-  // 1. Carregar dados do Supabase
+  // 1. Buscar Histórico no Supabase
   const carregarHistorico = async () => {
     try {
       setCarregando(true);
@@ -37,7 +37,7 @@ export default function Fidelidade() {
     carregarHistorico();
   }, []);
 
-  // Normalização de nomes (remove acentos, caixa alta e espaços duplicados)
+  // Normalização de Nomes
   const normalizarNome = (nome) => {
     if (!nome) return '';
     return nome
@@ -48,7 +48,7 @@ export default function Fidelidade() {
       .replace(/\s+/g, ' ');
   };
 
-  // 2. Salvar uma nova compra
+  // 2. Lançar Compra
   const handleAdicionarCompra = async (e) => {
     e.preventDefault();
     if (!cliente || !valor) return;
@@ -68,8 +68,8 @@ export default function Fidelidade() {
 
       if (error) throw error;
 
-      if (inserido) {
-        setHistoricoGeral([inserido[0], ...historicoGeral]);
+      if (inserido && inserido.length > 0) {
+        setHistoricoGeral(prev => [inserido[0], ...prev]);
       }
       
       setCliente('');
@@ -79,7 +79,7 @@ export default function Fidelidade() {
     }
   };
 
-  // 3. Registrar retirada do brinde
+  // 3. Registrar Retirada
   const handleRetirarBandana = async (nomeOriginal) => {
     const dataAtual = new Date().toISOString().split('T')[0];
     
@@ -98,15 +98,15 @@ export default function Fidelidade() {
 
       if (error) throw error;
 
-      if (inserido) {
-        setHistoricoGeral([inserido[0], ...historicoGeral]);
+      if (inserido && inserido.length > 0) {
+        setHistoricoGeral(prev => [inserido[0], ...prev]);
       }
     } catch (error) {
       alert("Erro ao registrar entrega de brinde: " + error.message);
     }
   };
 
-  // Processa o histórico para calcular saldos e prêmios de forma precisa
+  // 4. Resumo de Saldos e Premiações
   const resumoClientes = useMemo(() => {
     const resumo = {};
 
@@ -132,17 +132,16 @@ export default function Fidelidade() {
       const dados = resumo[chave];
       const totalBruto = dados.totalCompradoBruto;
       
-      // Total de brindes que o valor bruto já concedeu
       const totalBandanasGanhasBruto = Math.floor(totalBruto / 150);
-      
-      // Brindes ainda não resgatados
       const bandanasDisponiveis = Math.max(0, totalBandanasGanhasBruto - dados.totalRetiradas);
       
-      // Sobra do ciclo atual rumo ao PRÓXIMO brinde (ex: R$ 200 => R$ 50 de sobra)
+      // Sobra do ciclo de R$ 150
       const saldoSobraCiclo = totalBruto % 150;
       
-      // Quanto falta para o próximo ciclo de R$ 150
-      const faltamParaProximo = saldoSobraCiclo === 0 && totalBruto > 0 ? 0 : 150 - saldoSobraCiclo;
+      // Ajuste de cálculo para quanto falta para o próximo brinde
+      const faltamParaProximo = bandanasDisponiveis > 0 
+        ? 0 
+        : (150 - saldoSobraCiclo);
 
       return {
         nome: dados.nomeExibicao,
@@ -154,7 +153,7 @@ export default function Fidelidade() {
     });
   }, [historicoGeral]);
 
-  // Filtra o histórico linha a linha
+  // Filtro de Histórico
   const historicoFiltrado = useMemo(() => {
     const termoNormalizado = normalizarNome(pesquisa);
     if (!termoNormalizado) return historicoGeral;
@@ -166,15 +165,12 @@ export default function Fidelidade() {
 
   return (
     <div className="fidelidade-container">
-      
       <header className="fidelidade-header">
         <h1>Painel de Fidelidade</h1>
         <p>A cada R$ 150,00 em compras, o cliente ganha um brinde!</p>
       </header>
 
       <div className="fidelidade-conteudo">
-        
-        {/* Formulário de Lançamento */}
         <section className="secao-cadastro">
           <h2>Lançar Nova Compra</h2>
           <form onSubmit={handleAdicionarCompra} className="form-compra">
@@ -215,7 +211,6 @@ export default function Fidelidade() {
           </form>
         </section>
 
-        {/* Tabela de Saldos Operacionais */}
         <section className="secao-saldos">
           <h2>Saldos e Premiações Ativas</h2>
           <div className="tabela-wrapper">
@@ -276,14 +271,11 @@ export default function Fidelidade() {
             </table>
           </div>
         </section>
-
       </div>
 
-      {/* Histórico Geral Unificado com Barra de Pesquisa */}
       <footer className="secao-historico">
         <div className="historico-header-acoes">
           <h2>Histórico de Movimentações (Linha a Linha)</h2>
-          
           <div className="busca-wrapper">
             <input 
               type="text"
@@ -342,7 +334,6 @@ export default function Fidelidade() {
           </table>
         </div>
       </footer>
-
     </div>
   );
 }
